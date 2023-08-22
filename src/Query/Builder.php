@@ -1202,18 +1202,12 @@ class Builder extends BaseBuilder
                 ],
             ],
             'ne' => [
-                '$or' => [
-                    [
-                        $where['column'] => [
-                            '$lt' => $startOfDay,
-                        ],
+                '$not' => [
+                    $where['column'] => [
+                        '$gte' => $startOfDay,
+                        '$lte' => $endOfDay,
                     ],
-                    [
-                        $where['column'] => [
-                            '$gt' => $endOfDay,
-                        ],
-                    ],
-                ],
+                ]
             ],
             'lt', 'gte' => [
                 $where['column'] => [

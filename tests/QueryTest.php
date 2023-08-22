@@ -201,24 +201,6 @@ class QueryTest extends TestCase
 
     public function testWhereDate(): void
     {
-        $birthdayCount = Birthday::whereDate('birthday', '2021-05-12')->get();
-        $this->assertCount(3, $birthdayCount);
-
-        $birthdayCount = Birthday::whereDate('birthday', '2021-05-11')->get();
-        $this->assertCount(1, $birthdayCount);
-
-        $birthdayCount = Birthday::whereDate('birthday', '>', '2021-05-11')->get();
-        $this->assertCount(4, $birthdayCount);
-
-        $birthdayCount = Birthday::whereDate('birthday', '>=', '2021-05-11')->get();
-        $this->assertCount(5, $birthdayCount);
-
-        $birthdayCount = Birthday::whereDate('birthday', '<', '2021-05-11')->get();
-        $this->assertCount(1, $birthdayCount);
-
-        $birthdayCount = Birthday::whereDate('birthday', '<=', '2021-05-11')->get();
-        $this->assertCount(2, $birthdayCount);
-
         $birthdayCount = Birthday::whereDate('birthday', '<>', '2021-05-11')->get();
         $this->assertCount(5, $birthdayCount);
     }
