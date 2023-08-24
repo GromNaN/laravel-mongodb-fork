@@ -15,6 +15,7 @@ use Jenssegers\Mongodb\Collection;
 use Jenssegers\Mongodb\Connection;
 use Jenssegers\Mongodb\Eloquent\Model;
 use Jenssegers\Mongodb\Tests\Models\Book;
+use Jenssegers\Mongodb\Tests\Models\CastObjectId;
 use Jenssegers\Mongodb\Tests\Models\Guarded;
 use Jenssegers\Mongodb\Tests\Models\IdIsBinaryUuid;
 use Jenssegers\Mongodb\Tests\Models\IdIsInt;
@@ -821,11 +822,78 @@ class ModelTest extends TestCase
     public function testGetDirtyDates(): void
     {
         $user = new User();
-        $user->setRawAttributes(['name' => 'John Doe', 'birthday' => new DateTime('19 august 1989')], true);
+        $user->name = 'John Doe';
+        $user->birthday = new DateTime('19 august 1989');
+        $user->syncOriginal();
         $this->assertEmpty($user->getDirty());
 
         $user->birthday = new DateTime('19 august 1989');
         $this->assertEmpty($user->getDirty());
+    }
+
+    public function testGetDirty()
+    {
+        $user = new User([
+            'name' => 'John Doe',
+            'email' => 'john.doe@example.com',
+            'phone' => '123456789',
+            'age' => '35',
+        ]);
+
+        $user->save();
+
+        $this->assertFalse($user->isDirty());
+
+        $user->phone = '1234555555';
+        $this->assertTrue($user->isDirty());
+
+        $dirty = $user->getDirty();
+        $this->assertArrayHasKey('phone', $dirty);
+        $this->assertEquals('1234555555', $dirty['phone']);
+
+        $user->email = 'jane.doe@example.com';
+        $user->age = 35; // Change type
+        $this->assertTrue($user->isDirty());
+        $dirty = $user->getDirty();
+        $this->assertArrayHasKey('phone', $dirty);
+        $this->assertArrayHasKey('email', $dirty);
+        $this->assertArrayHasKey('age', $dirty);
+        $this->assertSame('1234555555', $dirty['phone']);
+        $this->assertSame('jane.doe@example.com', $dirty['email']);
+        $this->assertSame(35, $dirty['age']);
+
+        // Reset the previous value
+        $user->age = '35';
+        $dirty = $user->getDirty();
+        $this->assertArrayNotHasKey('age', $dirty);
+
+        $user->age = 35;
+        $user->save();
+
+        $this->assertFalse($user->isDirty());
+        $this->assertEmpty($user->getDirty());
+    }
+
+    public function testGetDirtyWithCast()
+    {
+        $user = new User([
+            'name' => 'John Doe',
+            'member_status' => 'MEMBER',
+            'the_date' => new DateTime('19 august 1989'),
+        ]);
+        $user->save();
+
+        // Update to the same value using the cast
+        $user->member_status = MemberStatus::Member;
+        $user->the_date = new DateTime('19 august 1989');
+        $this->assertFalse($user->isDirty());
+
+        // Change the value with the cast
+        $user->member_status = MemberStatus::Admin;
+        $this->assertTrue($user->isDirty());
+        $dirty = $user->getDirty();
+        $this->assertArrayHasKey('member_status', $dirty);
+        $this->assertSame('ADMIN', $dirty['member_status']);
     }
 
     public function testChunkById(): void
