@@ -1159,12 +1159,12 @@ class Builder extends BaseBuilder
                 '$or' => [
                     [
                         $column => [
-                            '$lte' => $values[0],
+                            '$lt' => $values[0],
                         ],
                     ],
                     [
                         $column => [
-                            '$gte' => $values[1],
+                            '$gt' => $values[1],
                         ],
                     ],
                 ],

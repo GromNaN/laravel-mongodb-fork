@@ -523,8 +523,8 @@ class BuilderTest extends TestCase
         yield 'whereNotBetween array of numbers' => [
             ['find' => [
                 ['$or' => [
-                    ['id' => ['$lte' => 1]],
-                    ['id' => ['$gte' => 2]],
+                    ['id' => ['$lt' => 1]],
+                    ['id' => ['$gt' => 2]],
                 ]],
                 [], // options
             ]],
