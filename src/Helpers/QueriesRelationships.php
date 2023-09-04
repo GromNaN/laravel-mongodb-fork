@@ -26,7 +26,7 @@ trait QueriesRelationships
      */
     public function has($relation, $operator = '>=', $count = 1, $boolean = 'and', Closure $callback = null)
     {
-        if (is_string($relation)) {
+        if (\is_string($relation)) {
             if (strpos($relation, '.') !== false) {
                 return $this->hasNested($relation, $operator, $count, $boolean, $callback);
             }
@@ -91,7 +91,7 @@ trait QueriesRelationships
         }
 
         // If the operator is <, <= or !=, we will use whereNotIn.
-        $not = in_array($operator, ['<', '<=', '!=']);
+        $not = \in_array($operator, ['<', '<=', '!=']);
         // If we are comparing to 0, we need an additional $not flip.
         if ($count == 0) {
             $not = ! $not;
@@ -127,7 +127,7 @@ trait QueriesRelationships
     {
         $relationCount = array_count_values(array_map(function ($id) {
             return (string) $id; // Convert Back ObjectIds to Strings
-        }, is_array($relations) ? $relations : $relations->flatten()->toArray()));
+        }, \is_array($relations) ? $relations : $relations->flatten()->toArray()));
         // Remove unwanted related objects based on the operator and count.
         $relationCount = array_filter($relationCount, function ($counted) use ($count, $operator) {
             // If we are comparing to 0, we always need all results.

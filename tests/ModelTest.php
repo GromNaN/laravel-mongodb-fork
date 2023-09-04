@@ -63,7 +63,7 @@ class ModelTest extends TestCase
         $this->assertTrue(isset($user->_id));
         $this->assertIsString($user->_id);
         $this->assertNotEquals('', (string) $user->_id);
-        $this->assertNotEquals(0, strlen((string) $user->_id));
+        $this->assertNotEquals(0, \strlen((string) $user->_id));
         $this->assertInstanceOf(Carbon::class, $user->created_at);
 
         $raw = $user->getAttributes();
@@ -255,7 +255,7 @@ class ModelTest extends TestCase
     public function testCreate(): void
     {
         $user = User::create(['name' => 'Jane Poe']);
-$this->assertInstanceOf(User::class, $user);
+        $this->assertInstanceOf(User::class, $user);
 
         $this->assertInstanceOf(Model::class, $user);
         $this->assertTrue($user->exists);
@@ -827,7 +827,7 @@ $this->assertInstanceOf(User::class, $user);
     public function testIdAttribute(): void
     {
         $user = User::create(['name' => 'John Doe']);
-     $this->assertInstanceOf(User::class, $user);
+        $this->assertInstanceOf(User::class, $user);
         $this->assertEquals($user->id, $user->_id);
 
         $user = User::create(['id' => 'custom_id', 'name' => 'John Doe']);
@@ -837,7 +837,7 @@ $this->assertInstanceOf(User::class, $user);
     public function testPushPull(): void
     {
         $user = User::create(['name' => 'John Doe']);
-$this->assertInstanceOf(User::class, $user);
+        $this->assertInstanceOf(User::class, $user);
 
         $user->push('tags', 'tag1');
         $user->push('tags', ['tag1', 'tag2']);

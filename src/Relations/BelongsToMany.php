@@ -146,7 +146,7 @@ class BelongsToMany extends EloquentBelongsToMany
         // Next, we will take the differences of the currents and given IDs and detach
         // all of the entities that exist in the "current" array but are not in the
         // the array of the IDs given to the method which will complete the sync.
-        if ($detaching && count($detach) > 0) {
+        if ($detaching && \count($detach) > 0) {
             $this->detach($detach);
 
             $changes['detached'] = (array) array_map(function ($v) {
@@ -161,7 +161,7 @@ class BelongsToMany extends EloquentBelongsToMany
             $changes, $this->attachNew($records, $current, false)
         );
 
-        if (count($changes['attached']) || count($changes['updated'])) {
+        if (\count($changes['attached']) || \count($changes['updated'])) {
             $this->touchIfTouching();
         }
 
@@ -229,7 +229,7 @@ class BelongsToMany extends EloquentBelongsToMany
         $this->parent->pull($this->getRelatedKey(), $ids);
 
         // Prepare the query to select all related objects.
-        if (count($ids) > 0) {
+        if (\count($ids) > 0) {
             $query->whereIn($this->related->getKeyName(), $ids);
         }
 
@@ -240,7 +240,7 @@ class BelongsToMany extends EloquentBelongsToMany
             $this->touchIfTouching();
         }
 
-        return count($ids);
+        return \count($ids);
     }
 
     /**
@@ -320,7 +320,7 @@ class BelongsToMany extends EloquentBelongsToMany
     {
         $results = [];
         foreach ($records as $id => $attributes) {
-            if (! is_array($attributes)) {
+            if (! \is_array($attributes)) {
                 [$id, $attributes] = [$attributes, []];
             }
             $results[$id] = $attributes;

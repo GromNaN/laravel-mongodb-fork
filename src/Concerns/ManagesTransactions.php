@@ -6,8 +6,8 @@ use Closure;
 use MongoDB\Client;
 use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Driver\Session;
-use function MongoDB\with_transaction;
 use Throwable;
+use function MongoDB\with_transaction;
 
 /**
  * @see https://docs.mongodb.com/manual/core/transactions/

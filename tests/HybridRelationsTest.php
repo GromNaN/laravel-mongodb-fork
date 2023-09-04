@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MongoDB\Laravel\Tests;
 
-use Illuminate\Database\Connection;
 use Illuminate\Database\MySqlConnection;
 use Illuminate\Support\Facades\DB;
 use MongoDB\Laravel\Tests\Models\Book;

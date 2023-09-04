@@ -2,11 +2,11 @@
 
 namespace MongoDB\Laravel\Eloquent\Casts;
 
-use function bin2hex;
-use function hex2bin;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use MongoDB\BSON\Binary;
 use MongoDB\Laravel\Eloquent\Model;
+use function bin2hex;
+use function hex2bin;
 use function str_replace;
 use function substr;
 
@@ -54,7 +54,7 @@ class BinaryUuid implements CastsAttributes
             return $value;
         }
 
-        if (is_string($value) && strlen($value) === 16) {
+        if (\is_string($value) && \strlen($value) === 16) {
             return new Binary($value, Binary::TYPE_UUID);
         }
 

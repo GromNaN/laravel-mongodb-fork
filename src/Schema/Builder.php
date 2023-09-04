@@ -38,7 +38,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
             ],
         ]), false);
 
-        return count($collections) ? true : false;
+        return \count($collections) ? true : false;
     }
 
     /**
@@ -143,7 +143,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
             ],
         ]), false);
 
-        return count($collections) ? current($collections) : false;
+        return \count($collections) ? current($collections) : false;
     }
 
     /**

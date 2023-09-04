@@ -110,7 +110,7 @@ abstract class EmbedsOneOrMany extends Relation
      */
     public function count()
     {
-        return count($this->getEmbedded());
+        return \count($this->getEmbedded());
     }
 
     /**
@@ -190,7 +190,7 @@ abstract class EmbedsOneOrMany extends Relation
             $ids = $ids->all();
         }
 
-        if (! is_array($ids)) {
+        if (! \is_array($ids)) {
             $ids = [$ids];
         }
 
@@ -263,7 +263,7 @@ abstract class EmbedsOneOrMany extends Relation
             $models[] = $this->toModel($attributes);
         }
 
-        if (count($models) > 0) {
+        if (\count($models) > 0) {
             $models = $this->eagerLoadRelations($models);
         }
 

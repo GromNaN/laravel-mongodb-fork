@@ -2,9 +2,7 @@
 
 namespace MongoDB\Laravel\Eloquent;
 
-use function array_key_exists;
 use DateTimeInterface;
-use function explode;
 use Illuminate\Contracts\Queue\QueueableCollection;
 use Illuminate\Contracts\Queue\QueueableEntity;
 use Illuminate\Contracts\Support\Arrayable;
@@ -13,11 +11,11 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
-use function in_array;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Laravel\Query\Builder as QueryBuilder;
+use function explode;
 use function uniqid;
 
 abstract class Model extends BaseModel
@@ -69,7 +67,7 @@ abstract class Model extends BaseModel
     {
         // If we don't have a value for 'id', we will use the MongoDB '_id' value.
         // This allows us to work with models in a more sql-like way.
-        if (! $value && array_key_exists('_id', $this->attributes)) {
+        if (! $value && \array_key_exists('_id', $this->attributes)) {
             $value = $this->attributes['_id'];
         }
 
@@ -202,7 +200,7 @@ abstract class Model extends BaseModel
     public function setAttribute($key, $value)
     {
         // Convert _id to ObjectID.
-        if ($key == '_id' && is_string($value)) {
+        if ($key == '_id' && \is_string($value)) {
             $builder = $this->newBaseQueryBuilder();
 
             $value = $builder->convertKey($value);
@@ -274,7 +272,7 @@ abstract class Model extends BaseModel
      */
     public function originalIsEquivalent($key)
     {
-        if (! array_key_exists($key, $this->original)) {
+        if (! \array_key_exists($key, $this->original)) {
             return false;
         }
 
@@ -372,10 +370,10 @@ abstract class Model extends BaseModel
      */
     public function push()
     {
-        if ($parameters = func_get_args()) {
+        if ($parameters = \func_get_args()) {
             $unique = false;
 
-            if (count($parameters) === 3) {
+            if (\count($parameters) === 3) {
                 [$column, $values, $unique] = $parameters;
             } else {
                 [$column, $values] = $parameters;
@@ -426,7 +424,7 @@ abstract class Model extends BaseModel
 
         foreach ($values as $value) {
             // Don't add duplicate values when we only want unique values.
-            if ($unique && (! is_array($current) || in_array($value, $current))) {
+            if ($unique && (! \is_array($current) || \in_array($value, $current))) {
                 continue;
             }
 
@@ -448,7 +446,7 @@ abstract class Model extends BaseModel
     {
         $current = $this->getAttributeFromArray($column) ?: [];
 
-        if (is_array($current)) {
+        if (\is_array($current)) {
             foreach ($values as $value) {
                 $keys = array_keys($current, $value);
 
@@ -597,7 +595,7 @@ abstract class Model extends BaseModel
             // If the attribute cast was a date or a datetime, we will serialize the date as
             // a string. This allows the developers to customize how dates are serialized
             // into an array without affecting how they are persisted into the storage.
-            if ($castValue !== null && in_array($castType, ['date', 'datetime', 'immutable_date', 'immutable_datetime'])) {
+            if ($castValue !== null && \in_array($castType, ['date', 'datetime', 'immutable_date', 'immutable_datetime'])) {
                 $castValue = $this->serializeDate($castValue);
             }
 

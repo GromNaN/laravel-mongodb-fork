@@ -45,7 +45,7 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
         $columns = $this->fluent($columns);
 
         // Columns are passed as a default array.
-        if (is_array($columns) && is_int(key($columns))) {
+        if (\is_array($columns) && \is_int(key($columns))) {
             // Transform the columns to the required array format.
             $transform = [];
 
@@ -110,11 +110,11 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
     {
         $indexOrColumns = $this->transformColumns($indexOrColumns);
         foreach ($this->collection->listIndexes() as $index) {
-            if (is_array($indexOrColumns) && in_array($index->getName(), $indexOrColumns)) {
+            if (\is_array($indexOrColumns) && \in_array($index->getName(), $indexOrColumns)) {
                 return true;
             }
 
-            if (is_string($indexOrColumns) && $index->getName() == $indexOrColumns) {
+            if (\is_string($indexOrColumns) && $index->getName() == $indexOrColumns) {
                 return true;
             }
         }
@@ -128,14 +128,14 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
      */
     protected function transformColumns($indexOrColumns)
     {
-        if (is_array($indexOrColumns)) {
+        if (\is_array($indexOrColumns)) {
             $indexOrColumns = $this->fluent($indexOrColumns);
 
             // Transform the columns to the index name.
             $transform = [];
 
             foreach ($indexOrColumns as $key => $value) {
-                if (is_int($key)) {
+                if (\is_int($key)) {
                     // There is no sorting order, use the default.
                     $column = $value;
                     $sorting = '1';
@@ -306,7 +306,7 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
     {
         if ($columns === null) {
             return $this->columns;
-        } elseif (is_string($columns)) {
+        } elseif (\is_string($columns)) {
             return $this->columns = [$columns];
         } else {
             return $this->columns = $columns;

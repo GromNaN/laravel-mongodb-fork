@@ -152,7 +152,7 @@ class EmbedsMany extends EmbedsOneOrMany
 
         // Remove the document from the parent model.
         foreach ($records as $i => $record) {
-            if (in_array($record[$primaryKey], $ids)) {
+            if (\in_array($record[$primaryKey], $ids)) {
                 unset($records[$i]);
             }
         }
@@ -162,7 +162,7 @@ class EmbedsMany extends EmbedsOneOrMany
         // We return the total number of deletes for the operation. The developers
         // can then check this number as a boolean type value or get this total count
         // of records deleted for logging, etc.
-        return count($ids);
+        return \count($ids);
     }
 
     /**
@@ -322,7 +322,7 @@ class EmbedsMany extends EmbedsOneOrMany
      */
     protected function setEmbedded($models)
     {
-        if (! is_array($models)) {
+        if (! \is_array($models)) {
             $models = [$models];
         }
 

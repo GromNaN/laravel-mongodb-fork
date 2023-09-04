@@ -2,7 +2,6 @@
 
 namespace MongoDB\Laravel;
 
-use function class_exists;
 use Composer\InstalledVersions;
 use Illuminate\Database\Connection as BaseConnection;
 use InvalidArgumentException;
@@ -10,6 +9,7 @@ use MongoDB\Client;
 use MongoDB\Database;
 use MongoDB\Laravel\Concerns\ManagesTransactions;
 use Throwable;
+use function class_exists;
 
 /**
  * @mixin Database
@@ -172,7 +172,7 @@ class Connection extends BaseConnection
         // By default driver options is an empty array.
         $driverOptions = [];
 
-        if (isset($config['driver_options']) && is_array($config['driver_options'])) {
+        if (isset($config['driver_options']) && \is_array($config['driver_options'])) {
             $driverOptions = $config['driver_options'];
         }
 
@@ -231,7 +231,7 @@ class Connection extends BaseConnection
     protected function getHostDsn(array $config): string
     {
         // Treat host option as array of hosts
-        $hosts = is_array($config['host']) ? $config['host'] : [$config['host']];
+        $hosts = \is_array($config['host']) ? $config['host'] : [$config['host']];
 
         foreach ($hosts as &$host) {
             // Check if we need to add a port to the host

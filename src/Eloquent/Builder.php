@@ -172,7 +172,7 @@ class Builder extends EloquentBuilder
 
             return $this->model->newFromBuilder((array) $results);
         } // The result is a single object.
-        elseif (is_array($results) && array_key_exists('_id', $results)) {
+        elseif (\is_array($results) && \array_key_exists('_id', $results)) {
             return $this->model->newFromBuilder((array) $results);
         }
 

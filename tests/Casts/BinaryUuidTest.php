@@ -3,10 +3,10 @@
 namespace MongoDB\Laravel\Tests\Casts;
 
 use Generator;
-use function hex2bin;
 use MongoDB\BSON\Binary;
 use MongoDB\Laravel\Tests\Models\CastBinaryUuid;
 use MongoDB\Laravel\Tests\TestCase;
+use function hex2bin;
 
 class BinaryUuidTest extends TestCase
 {

@@ -143,7 +143,7 @@ class Builder extends BaseBuilder
      */
     public function project($columns)
     {
-        $this->projections = is_array($columns) ? $columns : func_get_args();
+        $this->projections = \is_array($columns) ? $columns : \func_get_args();
 
         return $this;
     }
@@ -224,7 +224,7 @@ class Builder extends BaseBuilder
         $columns = $this->columns ?? [];
 
         // Drop all columns if * is present, MongoDB does not work this way.
-        if (in_array('*', $columns)) {
+        if (\in_array('*', $columns)) {
             $columns = [];
         }
 
@@ -261,14 +261,14 @@ class Builder extends BaseBuilder
                 foreach ($this->aggregate['columns'] as $column) {
                     // Add unwind if a subdocument array should be aggregated
                     // column: subarray.price => {$unwind: '$subarray'}
-                    if (count($splitColumns = explode('.*.', $column)) == 2) {
+                    if (\count($splitColumns = explode('.*.', $column)) == 2) {
                         $unwinds[] = $splitColumns[0];
                         $column = implode('.', $splitColumns);
                     }
 
                     $aggregations = blank($this->aggregate['columns']) ? [] : $this->aggregate['columns'];
 
-                    if (in_array('*', $aggregations) && $function == 'count') {
+                    if (\in_array('*', $aggregations) && $function == 'count') {
                         $options = $this->inheritConnectionOptions();
 
                         return ['countDocuments' => [$wheres, $options]];
@@ -320,7 +320,7 @@ class Builder extends BaseBuilder
             ];
 
             // Add custom query options
-            if (count($this->options)) {
+            if (\count($this->options)) {
                 $options = array_merge($options, $this->options);
             }
 
@@ -370,7 +370,7 @@ class Builder extends BaseBuilder
             $options['typeMap'] = ['root' => 'array', 'document' => 'array'];
 
             // Add custom query options
-            if (count($this->options)) {
+            if (\count($this->options)) {
                 $options = array_merge($options, $this->options);
             }
 
@@ -397,20 +397,20 @@ class Builder extends BaseBuilder
         }
 
         // Drop all columns if * is present, MongoDB does not work this way.
-        if (in_array('*', $this->columns)) {
+        if (\in_array('*', $this->columns)) {
             $this->columns = [];
         }
 
         $command = $this->toMql();
-        assert(count($command) >= 1, 'At least one method call is required to execute a query');
+        \assert(\count($command) >= 1, 'At least one method call is required to execute a query');
 
         $result = $this->collection;
         foreach ($command as $method => $arguments) {
-            $result = call_user_func_array([$result, $method], $arguments);
+            $result = \call_user_func_array([$result, $method], $arguments);
         }
 
         // countDocuments method returns int, wrap it to the format expected by the framework
-        if (is_int($result)) {
+        if (\is_int($result)) {
             $result = [
                 [
                     '_id'       => null,
@@ -516,7 +516,7 @@ class Builder extends BaseBuilder
      */
     public function orderBy($column, $direction = 'asc')
     {
-        if (is_string($direction)) {
+        if (\is_string($direction)) {
             $direction = match ($direction) {
                 'asc', 'ASC' => 1,
                 'desc', 'DESC' => -1,
@@ -545,7 +545,7 @@ class Builder extends BaseBuilder
             $values = $values->all();
         }
 
-        if (is_array($values) && (! array_is_list($values) || count($values) !== 2)) {
+        if (\is_array($values) && (! array_is_list($values) || \count($values) !== 2)) {
             throw new \InvalidArgumentException('Between $values must be a list with exactly two elements: [min, max]');
         }
 
@@ -566,7 +566,7 @@ class Builder extends BaseBuilder
         foreach ($values as $value) {
             // As soon as we find a value that is not an array we assume the user is
             // inserting a single document.
-            if (! is_array($value)) {
+            if (! \is_array($value)) {
                 $batch = false;
                 break;
             }
@@ -703,7 +703,7 @@ class Builder extends BaseBuilder
         $wheres = $this->compileWheres();
         $options = $this->inheritConnectionOptions();
 
-        if (is_int($this->limit)) {
+        if (\is_int($this->limit)) {
             if ($this->limit !== 1) {
                 throw new \LogicException(sprintf('Delete limit can be 1 or null (unlimited). Got %d', $this->limit));
             }
@@ -763,7 +763,7 @@ class Builder extends BaseBuilder
     {
         // Execute the closure on the mongodb collection
         if ($value instanceof Closure) {
-            return call_user_func($value, $this->collection);
+            return \call_user_func($value, $this->collection);
         }
 
         // Create an expression for the given value
@@ -789,9 +789,9 @@ class Builder extends BaseBuilder
         $operator = $unique ? '$addToSet' : '$push';
 
         // Check if we are pushing multiple values.
-        $batch = is_array($value) && array_is_list($value);
+        $batch = \is_array($value) && array_is_list($value);
 
-        if (is_array($column)) {
+        if (\is_array($column)) {
             if ($value !== null) {
                 throw new \InvalidArgumentException(sprintf('2nd argument of %s() must be "null" when 1st argument is an array. Got "%s" instead.', __METHOD__, get_debug_type($value)));
             }
@@ -815,12 +815,12 @@ class Builder extends BaseBuilder
     public function pull($column, $value = null)
     {
         // Check if we passed an associative array.
-        $batch = is_array($value) && array_is_list($value);
+        $batch = \is_array($value) && array_is_list($value);
 
         // If we are pulling multiple values, we need to use $pullAll.
         $operator = $batch ? '$pullAll' : '$pull';
 
-        if (is_array($column)) {
+        if (\is_array($column)) {
             $query = [$operator => $column];
         } else {
             $query = [$operator => [$column => $value]];
@@ -837,7 +837,7 @@ class Builder extends BaseBuilder
      */
     public function drop($columns)
     {
-        if (! is_array($columns)) {
+        if (! \is_array($columns)) {
             $columns = [$columns];
         }
 
@@ -872,7 +872,7 @@ class Builder extends BaseBuilder
     protected function performUpdate($query, array $options = [])
     {
         // Update multiple items by default.
-        if (! array_key_exists('multiple', $options)) {
+        if (! \array_key_exists('multiple', $options)) {
             $options['multiple'] = true;
         }
 
@@ -895,11 +895,11 @@ class Builder extends BaseBuilder
      */
     public function convertKey($id)
     {
-        if (is_string($id) && strlen($id) === 24 && ctype_xdigit($id)) {
+        if (\is_string($id) && \strlen($id) === 24 && ctype_xdigit($id)) {
             return new ObjectID($id);
         }
 
-        if (is_string($id) && strlen($id) === 16 && preg_match('~[^\x20-\x7E\t\r\n]~', $id) > 0) {
+        if (\is_string($id) && \strlen($id) === 16 && preg_match('~[^\x20-\x7E\t\r\n]~', $id) > 0) {
             return new Binary($id, Binary::TYPE_UUID);
         }
 
@@ -911,18 +911,18 @@ class Builder extends BaseBuilder
      */
     public function where($column, $operator = null, $value = null, $boolean = 'and')
     {
-        $params = func_get_args();
+        $params = \func_get_args();
 
         // Remove the leading $ from operators.
-        if (func_num_args() >= 3) {
+        if (\func_num_args() >= 3) {
             $operator = &$params[1];
 
-            if (is_string($operator) && str_starts_with($operator, '$')) {
+            if (\is_string($operator) && str_starts_with($operator, '$')) {
                 $operator = substr($operator, 1);
             }
         }
 
-        if (func_num_args() == 1 && is_string($column)) {
+        if (\func_num_args() == 1 && \is_string($column)) {
             throw new \ArgumentCountError(sprintf('Too few arguments to function %s("%s"), 1 passed and at least 2 expected when the 1st is a string.', __METHOD__, $column));
         }
 
@@ -968,7 +968,7 @@ class Builder extends BaseBuilder
 
             // Convert DateTime values to UTCDateTime.
             if (isset($where['value'])) {
-                if (is_array($where['value'])) {
+                if (\is_array($where['value'])) {
                     array_walk_recursive($where['value'], function (&$item, $key) {
                         if ($item instanceof DateTimeInterface) {
                             $item = new UTCDateTime($item);
@@ -980,7 +980,7 @@ class Builder extends BaseBuilder
                     }
                 }
             } elseif (isset($where['values'])) {
-                if (is_array($where['values'])) {
+                if (\is_array($where['values'])) {
                     array_walk_recursive($where['values'], function (&$item, $key) {
                         if ($item instanceof DateTimeInterface) {
                             $item = new UTCDateTime($item);
@@ -997,7 +997,7 @@ class Builder extends BaseBuilder
             // In a sequence of "where" clauses, the logical operator of the
             // first "where" is determined by the 2nd "where".
             // $where['boolean'] = "and", "or", "and not" or "or not"
-            if ($i == 0 && count($wheres) > 1
+            if ($i == 0 && \count($wheres) > 1
                 && str_starts_with($where['boolean'], 'and')
                 && str_starts_with($wheres[$i + 1]['boolean'], 'or')
             ) {
@@ -1019,7 +1019,7 @@ class Builder extends BaseBuilder
 
             // If there are multiple wheres, we will wrap it with $and. This is needed
             // to make nested wheres work.
-            elseif (count($wheres) > 1) {
+            elseif (\count($wheres) > 1) {
                 $result = ['$and' => [$result]];
             }
 
@@ -1039,7 +1039,7 @@ class Builder extends BaseBuilder
         extract($where);
 
         // Replace like or not like with a Regex instance.
-        if (in_array($operator, ['like', 'not like'])) {
+        if (\in_array($operator, ['like', 'not like'])) {
             $regex = preg_replace(
                 [
                     // Unescaped % are converted to .*
@@ -1063,23 +1063,23 @@ class Builder extends BaseBuilder
         }
 
         // Manipulate regex operations.
-        elseif (in_array($operator, ['regex', 'not regex'])) {
+        elseif (\in_array($operator, ['regex', 'not regex'])) {
             // Automatically convert regular expression strings to Regex objects.
-            if (is_string($value)) {
+            if (\is_string($value)) {
                 // Detect the delimiter and validate the preg pattern
                 $delimiter = substr($value, 0, 1);
-                if (! in_array($delimiter, self::REGEX_DELIMITERS)) {
+                if (! \in_array($delimiter, self::REGEX_DELIMITERS)) {
                     throw new \LogicException(sprintf('Missing expected starting delimiter in regular expression "%s", supported delimiters are: %s', $value, implode(' ', self::REGEX_DELIMITERS)));
                 }
                 $e = explode($delimiter, $value);
                 // We don't try to detect if the last delimiter is escaped. This would be an invalid regex.
-                if (count($e) < 3) {
+                if (\count($e) < 3) {
                     throw new \LogicException(sprintf('Missing expected ending delimiter "%s" in regular expression "%s"', $delimiter, $value));
                 }
                 // Flags are after the last delimiter
                 $flags = end($e);
                 // Extract the regex string between the delimiters
-                $regstr = substr($value, 1, -1 - strlen($flags));
+                $regstr = substr($value, 1, -1 - \strlen($flags));
                 $value = new Regex($regstr, $flags);
             }
 
@@ -1283,11 +1283,11 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereTime(array $where): array
     {
-        if (! is_string($where['value']) || ! preg_match('/^[0-2][0-9](:[0-6][0-9](:[0-6][0-9])?)?$/', $where['value'], $matches)) {
-            throw new \InvalidArgumentException(sprintf('Invalid time format, expected HH:MM:SS, HH:MM or HH, got "%s"', is_string($where['value']) ? $where['value'] : get_debug_type($where['value'])));
+        if (! \is_string($where['value']) || ! preg_match('/^[0-2][0-9](:[0-6][0-9](:[0-6][0-9])?)?$/', $where['value'], $matches)) {
+            throw new \InvalidArgumentException(sprintf('Invalid time format, expected HH:MM:SS, HH:MM or HH, got "%s"', \is_string($where['value']) ? $where['value'] : get_debug_type($where['value'])));
         }
 
-        $format = match (count($matches)) {
+        $format = match (\count($matches)) {
             1 => '%H',
             2 => '%H:%M',
             3 => '%H:%M:%S',

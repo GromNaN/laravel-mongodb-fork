@@ -8,6 +8,9 @@ $rules = [
         'comment_type' => 'phpdocs_like',
     ],
     'ordered_imports' => [
+        'imports_order' => [
+            'class', 'function', 'const',
+        ],
         'sort_algorithm' => 'alpha',
     ],
     'array_indentation' => true,
@@ -72,6 +75,13 @@ $rules = [
     ],
     'native_function_casing' => true,
     'native_function_type_declaration_casing' => true,
+    'native_function_invocation' => [
+        'include' => [
+            '@compiler_optimized',
+        ],
+        'scope' => 'all',
+        'strict' => true,
+    ],
     'no_alternative_syntax' => true,
     'no_binary_string' => true,
     'no_blank_lines_after_class_opening' => true,

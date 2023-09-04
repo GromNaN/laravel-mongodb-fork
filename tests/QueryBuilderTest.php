@@ -517,7 +517,7 @@ class QueryBuilderTest extends TestCase
 
         $list = DB::collection('items')->pluck('name', '_id')->toArray();
         $this->assertCount(4, $list);
-        $this->assertEquals(24, strlen(key($list)));
+        $this->assertEquals(24, \strlen(key($list)));
     }
 
     public function testAggregate()
@@ -841,7 +841,7 @@ class QueryBuilderTest extends TestCase
         $results = DB::collection('items')->project(['tags' => ['$slice' => 1]])->get();
 
         foreach ($results as $result) {
-            $this->assertEquals(1, count($result['tags']));
+            $this->assertEquals(1, \count($result['tags']));
         }
     }
 
