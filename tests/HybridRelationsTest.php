@@ -21,7 +21,6 @@ class HybridRelationsTest extends TestCase
     {
         parent::setUp();
 
-        /** @var Connection */
         try {
             DB::connection('mysql')->select('SELECT 1');
         } catch (PDOException) {

@@ -34,8 +34,9 @@ class TransactionTest extends TestCase
     public function testCreateWithCommit(): void
     {
         DB::beginTransaction();
-        /** @var User $klinson */
+
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $klinson);
         DB::commit();
 
         $this->assertInstanceOf(Model::class, $klinson);
@@ -50,8 +51,9 @@ class TransactionTest extends TestCase
     public function testCreateRollBack(): void
     {
         DB::beginTransaction();
-        /** @var User $klinson */
+
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $klinson);
         DB::rollBack();
 
         $this->assertInstanceOf(Model::class, $klinson);
@@ -82,8 +84,9 @@ class TransactionTest extends TestCase
     public function testEloquentCreateWithCommit(): void
     {
         DB::beginTransaction();
-        /** @var User $klinson */
+
         $klinson = User::getModel();
+        $this->assertInstanceOf(User::class, $klinson);
         $klinson->name = 'klinson';
         $klinson->save();
         DB::commit();
@@ -99,8 +102,9 @@ class TransactionTest extends TestCase
     public function testEloquentCreateWithRollBack(): void
     {
         DB::beginTransaction();
-        /** @var User $klinson */
+
         $klinson = User::getModel();
+        $this->assertInstanceOf(User::class, $klinson);
         $klinson->name = 'klinson';
         $klinson->save();
         DB::rollBack();
@@ -159,10 +163,11 @@ class TransactionTest extends TestCase
 
     public function testEloquentUpdateWithCommit(): void
     {
-        /** @var User $klinson */
+
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
-        /** @var User $alcaeus */
+        $this->assertInstanceOf(User::class, $klinson);
         $alcaeus = User::create(['name' => 'alcaeus', 'age' => 38, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $alcaeus);
 
         DB::beginTransaction();
         $klinson->age = 21;
@@ -180,10 +185,11 @@ class TransactionTest extends TestCase
 
     public function testEloquentUpdateWithRollBack(): void
     {
-        /** @var User $klinson */
+
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
-        /** @var User $alcaeus */
+        $this->assertInstanceOf(User::class, $klinson);
         $alcaeus = User::create(['name' => 'klinson', 'age' => 38, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $alcaeus);
 
         DB::beginTransaction();
         $klinson->age = 21;
@@ -225,8 +231,9 @@ class TransactionTest extends TestCase
 
     public function testEloquentDeleteWithCommit(): void
     {
-        /** @var User $klinson */
+
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $klinson);
 
         DB::beginTransaction();
         $klinson->delete();
@@ -237,8 +244,8 @@ class TransactionTest extends TestCase
 
     public function testEloquentDeleteWithRollBack(): void
     {
-        /** @var User $klinson */
         $klinson = User::create(['name' => 'klinson', 'age' => 20, 'title' => 'admin']);
+        $this->assertInstanceOf(User::class, $klinson);
 
         DB::beginTransaction();
         $klinson->delete();

@@ -659,8 +659,8 @@ class EmbeddedRelationsTest extends TestCase
 
     public function testEmbedsManyToArray()
     {
-        /** @var User $user */
         $user = User::create(['name' => 'John Doe']);
+        $this->assertInstanceOf(User::class, $user);
         $user->addresses()->save(new Address(['city' => 'New York']));
         $user->addresses()->save(new Address(['city' => 'Paris']));
         $user->addresses()->save(new Address(['city' => 'Brussels']));
@@ -672,8 +672,8 @@ class EmbeddedRelationsTest extends TestCase
 
     public function testEmbedsManyRefresh()
     {
-        /** @var User $user */
         $user = User::create(['name' => 'John Doe']);
+        $this->assertInstanceOf(User::class, $user);
         $user->addresses()->save(new Address(['city' => 'New York']));
         $user->addresses()->save(new Address(['city' => 'Paris']));
         $user->addresses()->save(new Address(['city' => 'Brussels']));
@@ -688,10 +688,10 @@ class EmbeddedRelationsTest extends TestCase
 
     public function testEmbeddedSave()
     {
-        /** @var User $user */
         $user = User::create(['name' => 'John Doe']);
-        /** @var Address $address */
+        $this->assertInstanceOf(User::class, $user);
         $address = $user->addresses()->create(['city' => 'New York']);
+        $this->assertInstanceOf(Address::class, $address);
         $father = $user->father()->create(['name' => 'Mark Doe']);
 
         $address->city = 'Paris';

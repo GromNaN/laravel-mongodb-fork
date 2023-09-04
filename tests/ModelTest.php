@@ -84,8 +84,8 @@ class ModelTest extends TestCase
         $raw = $user->getAttributes();
         $this->assertInstanceOf(ObjectID::class, $raw['_id']);
 
-        /** @var User $check */
         $check = User::find($user->_id);
+        $this->assertInstanceOf(User::class, $check);
         $check->age = 36;
         $check->save();
 
@@ -196,8 +196,8 @@ class ModelTest extends TestCase
         $user->age = 35;
         $user->save();
 
-        /** @var User $check */
         $check = User::find($user->_id);
+        $this->assertInstanceOf(User::class, $check);
 
         $this->assertInstanceOf(Model::class, $check);
         $this->assertTrue($check->exists);
@@ -227,8 +227,8 @@ class ModelTest extends TestCase
             ['name' => 'Jane Doe'],
         ]);
 
-        /** @var User $user */
         $user = User::first();
+        $this->assertInstanceOf(User::class, $user);
         $this->assertInstanceOf(Model::class, $user);
         $this->assertEquals('John Doe', $user->name);
     }
@@ -254,15 +254,15 @@ class ModelTest extends TestCase
 
     public function testCreate(): void
     {
-        /** @var User $user */
         $user = User::create(['name' => 'Jane Poe']);
+$this->assertInstanceOf(User::class, $user);
 
         $this->assertInstanceOf(Model::class, $user);
         $this->assertTrue($user->exists);
         $this->assertEquals('Jane Poe', $user->name);
 
-        /** @var User $check */
         $check = User::where('name', 'Jane Poe')->first();
+        $this->assertInstanceOf(User::class, $check);
         $this->assertEquals($user->_id, $check->_id);
     }
 
@@ -291,8 +291,8 @@ class ModelTest extends TestCase
         sleep(1);
         $user->touch();
 
-        /** @var User $check */
         $check = User::find($user->_id);
+        $this->assertInstanceOf(User::class, $check);
 
         $this->assertNotEquals($old, $check->updated_at);
     }
@@ -304,8 +304,8 @@ class ModelTest extends TestCase
 
         $this->assertEquals(2, Soft::count());
 
-        /** @var Soft $user */
         $user = Soft::where('name', 'John Doe')->first();
+        $this->assertInstanceOf(Soft::class, $user);
         $this->assertTrue($user->exists);
         $this->assertFalse($user->trashed());
         $this->assertNull($user->deleted_at);
@@ -435,8 +435,8 @@ class ModelTest extends TestCase
 
         $this->assertEquals('A Game of Thrones', $book->getKey());
 
-        /** @var Book $check */
         $check = Book::find('A Game of Thrones');
+        $this->assertInstanceOf(Book::class, $check);
         $this->assertEquals('title', $check->getKeyName());
         $this->assertEquals('A Game of Thrones', $check->getKey());
         $this->assertEquals('A Game of Thrones', $check->title);
@@ -653,13 +653,13 @@ class ModelTest extends TestCase
         $this->assertLessThan(2, abs(time() - $item->created_at->getTimestamp()));
 
         // test default date format for json output
-        /** @var Item $item */
         $item = Item::create(['name' => 'sword']);
+        $this->assertInstanceOf(Item::class, $item);
         $json = $item->toArray();
         $this->assertEquals($item->created_at->toISOString(), $json['created_at']);
 
-        /** @var User $user */
         //Test with create and standard property
+        $this->assertInstanceOf(User::class, $user);
         $user = User::create(['name' => 'Jane Doe', 'birthday' => time()]);
         $this->assertInstanceOf(Carbon::class, $user->birthday);
 
@@ -826,8 +826,8 @@ class ModelTest extends TestCase
 
     public function testIdAttribute(): void
     {
-        /** @var User $user */
         $user = User::create(['name' => 'John Doe']);
+     $this->assertInstanceOf(User::class, $user);
         $this->assertEquals($user->id, $user->_id);
 
         $user = User::create(['id' => 'custom_id', 'name' => 'John Doe']);
@@ -836,8 +836,8 @@ class ModelTest extends TestCase
 
     public function testPushPull(): void
     {
-        /** @var User $user */
         $user = User::create(['name' => 'John Doe']);
+$this->assertInstanceOf(User::class, $user);
 
         $user->push('tags', 'tag1');
         $user->push('tags', ['tag1', 'tag2']);
@@ -931,7 +931,6 @@ class ModelTest extends TestCase
 
     public function testMultipleLevelDotNotation(): void
     {
-        /** @var Book $book */
         $book = Book::create([
             'title' => 'A Game of Thrones',
             'chapters' => [
@@ -940,6 +939,7 @@ class ModelTest extends TestCase
                 ],
             ],
         ]);
+        $this->assertInstanceOf(Book::class, $book);
 
         $this->assertEquals(['one' => ['title' => 'The first chapter']], $book->chapters);
         $this->assertEquals(['title' => 'The first chapter'], $book['chapters.one']);
@@ -1006,18 +1006,17 @@ class ModelTest extends TestCase
     {
         $name = 'Jane Poe';
 
-        /** @var User $user */
         $user = User::where('name', $name)->first();
         $this->assertNull($user);
 
-        /** @var User $user */
         $user = User::firstOrCreate(compact('name'));
+        $this->assertInstanceOf(User::class, $user);
         $this->assertInstanceOf(Model::class, $user);
         $this->assertTrue($user->exists);
         $this->assertEquals($name, $user->name);
 
-        /** @var User $check */
         $check = User::where('name', $name)->first();
+        $this->assertInstanceOf(User::class, $check);
         $this->assertEquals($user->_id, $check->_id);
     }
 
@@ -1030,8 +1029,8 @@ class ModelTest extends TestCase
         $user->member_status = MemberStatus::Member;
         $user->save();
 
-        /** @var User $check */
         $check = User::where('name', $name)->first();
+        $this->assertInstanceOf(User::class, $check);
         $this->assertSame(MemberStatus::Member->value, $check->getRawOriginal('member_status'));
         $this->assertSame(MemberStatus::Member, $check->member_status);
     }
