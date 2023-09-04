@@ -4,6 +4,7 @@
 
 $rules = [
     '@PSR2' => true,
+    'declare_strict_types' => true,
     'align_multiline_comment' => [
         'comment_type' => 'phpdocs_like',
     ],

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MongoDB\Laravel\Eloquent;
 
 use Illuminate\Database\Eloquent\Concerns\HasRelationships;

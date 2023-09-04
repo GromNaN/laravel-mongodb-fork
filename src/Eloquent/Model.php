@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MongoDB\Laravel\Eloquent;
 
 use DateTimeInterface;
@@ -117,7 +119,7 @@ abstract class Model extends BaseModel
             $date = $value->toDateTime();
 
             $seconds = $date->format('U');
-            $milliseconds = abs($date->format('v'));
+            $milliseconds = abs((int) $date->format('v'));
             $timestampMs = sprintf('%d%03d', $seconds, $milliseconds);
 
             return Date::createFromTimestampMs($timestampMs);

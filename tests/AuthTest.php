@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MongoDB\Laravel\Tests;
 
 use Illuminate\Auth\Passwords\PasswordBroker;
