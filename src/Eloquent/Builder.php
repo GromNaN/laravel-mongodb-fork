@@ -7,11 +7,13 @@ namespace MongoDB\Laravel\Eloquent;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use MongoDB\Driver\Cursor;
+use MongoDB\Laravel\Collection;
 use MongoDB\Laravel\Helpers\QueriesRelationships;
 use MongoDB\Model\BSONDocument;
 
 use function array_key_exists;
 use function array_merge;
+use function assert;
 use function collect;
 use function is_array;
 use function iterator_to_array;
@@ -49,6 +51,17 @@ class Builder extends EloquentBuilder
         'sum',
         'toSql',
     ];
+
+    /**
+     * Returns the count of all documents in a collection.
+     */
+    public function estimatedCount(): int
+    {
+        $collection = $this->query->raw(null);
+        assert($collection instanceof Collection);
+
+        return $collection->estimatedDocumentCount();
+    }
 
     /** @inheritdoc */
     public function update(array $values, array $options = [])

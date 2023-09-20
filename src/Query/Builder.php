@@ -794,9 +794,17 @@ class Builder extends BaseBuilder
         return $this->pluck($column, $key);
     }
 
-    /** @inheritdoc */
+    /**
+     * @param mixed $value
+     *
+     * @return \Illuminate\Contracts\Database\Query\Expression|Expression|mixed|\MongoDB\Collection
+     */
     public function raw($value = null)
     {
+        if ($this->wheres || $this->columns || $this->groups || $this->aggregate) {
+            throw new BadMethodCallException('Raw queries cannot be used in conjunction with other query builder features.');
+        }
+
         // Execute the closure on the mongodb collection
         if ($value instanceof Closure) {
             return call_user_func($value, $this->collection);

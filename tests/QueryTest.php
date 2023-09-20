@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MongoDB\Laravel\Tests;
 
+use BadMethodCallException;
 use DateTimeImmutable;
 use LogicException;
 use MongoDB\Laravel\Tests\Models\Birthday;
@@ -361,6 +362,16 @@ class QueryTest extends TestCase
         // Test for issue #165
         $count = User::select('_id', 'age', 'title')->where('age', '<>', 35)->count();
         $this->assertEquals(6, $count);
+    }
+
+    public function testEstimatedCount(): void
+    {
+        $count = User::estimatedCount();
+        $this->assertEquals(9, $count);
+
+        $this->expectException(BadMethodCallException::class);
+        $this->expectExceptionMessage('Raw queries cannot be used in conjunction with other query builder features.');
+        User::where('age', '<>', 35)->estimatedCount();
     }
 
     public function testExists(): void
