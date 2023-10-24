@@ -477,7 +477,7 @@ class RelationsTest extends TestCase
     public function testMorphToMany(): void
     {
 
-        // cerate user
+        // create user
         $user = User::updateOrCreate(['name' => 'John Doe']);
         // create client
         $client = Client::updateOrCreate(['name' => 'Jane Doe']);
