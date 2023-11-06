@@ -17,11 +17,15 @@ use MongoDB\Laravel\Relations\MorphMany;
 use MongoDB\Laravel\Relations\MorphTo;
 use MongoDB\Laravel\Relations\MorphToMany;
 
-
+use function array_pop;
 use function debug_backtrace;
+use function implode;
 use function is_subclass_of;
+use function method_exists;
+use function preg_split;
 
 use const DEBUG_BACKTRACE_IGNORE_ARGS;
+use const PREG_SPLIT_DELIM_CAPTURE;
 
 /**
  * Cross-database relationships between SQL and MongoDB.
@@ -43,7 +47,7 @@ trait HybridRelations
     public function hasOne($related, $foreignKey = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::hasOne($related, $foreignKey, $localKey);
         }
 
@@ -72,7 +76,7 @@ trait HybridRelations
     public function morphOne($related, $name, $type = null, $id = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::morphOne($related, $name, $type, $id, $localKey);
         }
 
@@ -99,7 +103,7 @@ trait HybridRelations
     public function hasMany($related, $foreignKey = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::hasMany($related, $foreignKey, $localKey);
         }
 
@@ -128,7 +132,7 @@ trait HybridRelations
     public function morphMany($related, $name, $type = null, $id = null, $localKey = null)
     {
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::morphMany($related, $name, $type, $id, $localKey);
         }
 
@@ -168,7 +172,7 @@ trait HybridRelations
         }
 
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::belongsTo($related, $foreignKey, $ownerKey, $relation);
         }
 
@@ -280,7 +284,7 @@ trait HybridRelations
         }
 
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, MongoDBModel::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::belongsToMany(
                 $related,
                 $collection,
@@ -335,6 +339,7 @@ trait HybridRelations
      * @param string $parentKey
      * @param string $relatedKey
      * @param string $relation
+     *
      * @return \Illuminate\Database\Eloquent\Relations\MorphToMany
      */
     public function morphToMany(
@@ -346,11 +351,10 @@ trait HybridRelations
         $parentKey = null,
         $relatedKey = null,
         $relation = null,
-        $inverse = false
+        $inverse = false,
     ) {
-
         // Check if it is a relation with an original model.
-        if (!is_subclass_of($related, \Mongodb\Laravel\Eloquent\Model::class)) {
+        if (! is_subclass_of($related, MongoDBModel::class)) {
             return parent::MorphToMany(
                 $related,
                 $name,
@@ -365,7 +369,7 @@ trait HybridRelations
 
         $caller = $this->guessBelongsToManyRelation();
 
-        $instance = new $related;
+        $instance = new $related();
 
         $foreignPivotKey = $foreignPivotKey ?: $name . '_id';
 
@@ -374,7 +378,7 @@ trait HybridRelations
         // Now we're ready to create a new query builder for the related model and
         // the relationship instances for this relation. This relation will set
         // appropriate query constraints then entirely manage the hydrations.
-        if (!$table) {
+        if (! $table) {
             $words = preg_split('/(_)/u', $name, -1, PREG_SPLIT_DELIM_CAPTURE);
 
             $lastWord = array_pop($words);
@@ -419,7 +423,7 @@ trait HybridRelations
         $relatedPivotKey = null,
         $parentKey = null,
         $relatedKey = null,
-        $inverse = false
+        $inverse = false,
     ) {
         $caller = $this->guessBelongsToManyRelation();
 
@@ -458,7 +462,7 @@ trait HybridRelations
         return parent::guessBelongsToManyRelation();
     }
 
-    /** @inheritdoc */
+    /** @inheritDoc */
     public function newEloquentBuilder($query)
     {
         if ($this instanceof MongoDBModel) {
