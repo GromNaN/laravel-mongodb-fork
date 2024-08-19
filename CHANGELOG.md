@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 ## [5.0.0] - next
 
 * **BREAKING CHANGE** Use `id` as an alias for `_id` in commands and queries for compatibility with Eloquent packages by @GromNaN in [#3040](https://github.com/mongodb/laravel-mongodb/pull/3040)
+* **BREAKING CHANGE** Remove `$collection` from document model classes, use `$table` instead by @GromNaN in [#3040](https://github.com/mongodb/laravel-mongodb/pull/3040)
+* **BREAKING CHANGE** Remove `Connection::collection()`, use `Connection::table()` instead by @GromNaN in [#3040](https://github.com/mongodb/laravel-mongodb/pull/3040)
 
 ## [4.8.0] - next
 
