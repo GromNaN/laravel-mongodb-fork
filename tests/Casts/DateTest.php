@@ -11,15 +11,28 @@ use MongoDB\BSON\UTCDateTime;
 use MongoDB\Laravel\Tests\Models\Casting;
 use MongoDB\Laravel\Tests\TestCase;
 
+use function date_default_timezone_get;
+use function date_default_timezone_set;
 use function now;
 
 class DateTest extends TestCase
 {
+    private string $timezone;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->timezone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Rome');
+    }
+
+    protected function tearDown(): void
+    {
+        date_default_timezone_set($this->timezone);
         Casting::truncate();
+
+        parent::tearDown();
     }
 
     public function testDate(): void
@@ -28,30 +41,35 @@ class DateTest extends TestCase
 
         self::assertInstanceOf(Carbon::class, $model->dateField);
         self::assertEquals(now()->startOfDay()->format('Y-m-d H:i:s'), (string) $model->dateField);
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $model->update(['dateField' => now()->subDay()]);
 
         self::assertInstanceOf(Carbon::class, $model->dateField);
         self::assertInstanceOf(UTCDateTime::class, $model->getRawOriginal('dateField'));
         self::assertEquals(now()->subDay()->startOfDay()->format('Y-m-d H:i:s'), (string) $model->dateField);
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $model->update(['dateField' => new DateTime()]);
 
         self::assertInstanceOf(Carbon::class, $model->dateField);
         self::assertInstanceOf(UTCDateTime::class, $model->getRawOriginal('dateField'));
         self::assertEquals(now()->startOfDay()->format('Y-m-d H:i:s'), (string) $model->dateField);
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $model->update(['dateField' => (new DateTime())->modify('-1 day')]);
 
         self::assertInstanceOf(Carbon::class, $model->dateField);
         self::assertInstanceOf(UTCDateTime::class, $model->getRawOriginal('dateField'));
         self::assertEquals(now()->subDay()->startOfDay()->format('Y-m-d H:i:s'), (string) $model->dateField);
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $refetchedModel = Casting::query()->find($model->getKey());
 
         self::assertInstanceOf(Carbon::class, $refetchedModel->dateField);
         self::assertInstanceOf(UTCDateTime::class, $model->getRawOriginal('dateField'));
         self::assertEquals(now()->subDay()->startOfDay()->format('Y-m-d H:i:s'), (string) $refetchedModel->dateField);
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $model = Casting::query()->create();
         $this->assertNull($model->dateField);
@@ -69,6 +87,7 @@ class DateTest extends TestCase
             Carbon::createFromTimestamp(1698577443)->startOfDay()->format('Y-m-d H:i:s'),
             (string) $model->dateField,
         );
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
 
         $model->update(['dateField' => '2023-10-28']);
 
@@ -77,6 +96,7 @@ class DateTest extends TestCase
             Carbon::createFromTimestamp(1698577443)->subDay()->startOfDay()->format('Y-m-d H:i:s'),
             (string) $model->dateField,
         );
+        self::assertEquals(date_default_timezone_get(), (string) $model->dateField->getTimezone());
     }
 
     public function testDateWithCustomFormat(): void
