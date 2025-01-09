@@ -2,11 +2,10 @@
 
 namespace Eloquent;
 
-use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Connection;
-use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Builder;
+use MongoDB\Laravel\Eloquent\Model;
 use MongoDB\Laravel\Tests\TestCase;
 
 use function now;
@@ -22,15 +21,7 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
 {
     protected function setUp(): void
     {
-        $db = new DB();
-
-        $db->addConnection([
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-        ]);
-
-        $db->bootEloquent();
-        $db->setAsGlobal();
+        parent::setUp();
 
         $this->createSchema();
     }
@@ -82,13 +73,13 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
 
     public function testItGuessesRelationName()
     {
-        $user = \Illuminate\Tests\Database\HasOneOfManyTestUser::make();
+        $user = HasOneOfManyTestUser::make();
         $this->assertSame('latest_login', $user->latest_login()->getRelationName());
     }
 
     public function testItGuessesRelationNameAndAddsOfManyWhenTableNameIsRelationName()
     {
-        $model = \Illuminate\Tests\Database\HasOneOfManyTestModel::make();
+        $model = HasOneOfManyTestModel::make();
         $this->assertSame('logins_of_many', $model->logins()->getRelationName());
     }
 
@@ -119,7 +110,7 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
 
     public function testGlobalScopeIsNotAppliedWhenRelationIsDefinedWithoutGlobalScope()
     {
-        \Illuminate\Tests\Database\HasOneOfManyTestLogin::addGlobalScope('test', function ($query) {
+        HasOneOfManyTestLogin::addGlobalScope('test', function ($query) {
             $query->orderBy('id');
         });
 
@@ -134,7 +125,7 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
 
     public function testGlobalScopeIsNotAppliedWhenRelationIsDefinedWithoutGlobalScopeWithComplexQuery()
     {
-        \Illuminate\Tests\Database\HasOneOfManyTestPrice::addGlobalScope('test', function ($query) {
+        HasOneOfManyTestPrice::addGlobalScope('test', function ($query) {
             $query->orderBy('id');
         });
 
@@ -524,7 +515,7 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
      */
     protected function connection()
     {
-        return Eloquent::getConnectionResolver()->connection();
+        return Model::getConnectionResolver()->connection('mongodb');
     }
 
     /**
@@ -541,8 +532,9 @@ class DatabaseEloquentHasOneOfManyTest extends TestCase
 /**
  * Eloquent Models...
  */
-class HasOneOfManyTestUser extends Eloquent
+class HasOneOfManyTestUser extends Model
 {
+    protected $connection = 'mongodb';
     protected $table = 'users';
     protected $guarded = [];
     public $timestamps = false;
@@ -559,7 +551,7 @@ class HasOneOfManyTestUser extends Eloquent
 
     public function latest_login_with_soft_deletes()
     {
-        return $this->hasOne(\Illuminate\Tests\Database\HasOneOfManyTestLoginWithSoftDeletes::class, 'user_id')->ofMany();
+        return $this->hasOne(HasOneOfManyTestLoginWithSoftDeletes::class, 'user_id')->ofMany();
     }
 
     public function latest_login_with_shortcut()
@@ -595,7 +587,7 @@ class HasOneOfManyTestUser extends Eloquent
 
     public function states()
     {
-        return $this->hasMany(\Illuminate\Tests\Database\HasOneOfManyTestState::class, 'user_id');
+        return $this->hasMany(HasOneOfManyTestState::class, 'user_id');
     }
 
     public function foo_state()
@@ -662,7 +654,7 @@ class HasOneOfManyTestUser extends Eloquent
     }
 }
 
-class HasOneOfManyTestModel extends Eloquent
+class HasOneOfManyTestModel extends Model
 {
     public function logins()
     {
@@ -670,32 +662,36 @@ class HasOneOfManyTestModel extends Eloquent
     }
 }
 
-class HasOneOfManyTestLogin extends Eloquent
+class HasOneOfManyTestLogin extends Model
 {
+    protected $connection = 'mongodb';
     protected $table = 'logins';
     protected $guarded = [];
     public $timestamps = false;
 }
 
-class HasOneOfManyTestLoginWithSoftDeletes extends Eloquent
+class HasOneOfManyTestLoginWithSoftDeletes extends Model
 {
     use SoftDeletes;
 
+    protected $connection = 'mongodb';
     protected $table = 'logins';
     protected $guarded = [];
     public $timestamps = false;
 }
 
-class HasOneOfManyTestState extends Eloquent
+class HasOneOfManyTestState extends Model
 {
+    protected $connection = 'mongodb';
     protected $table = 'states';
     protected $guarded = [];
     public $timestamps = true;
     protected $fillable = ['type', 'state', 'updated_at'];
 }
 
-class HasOneOfManyTestPrice extends Eloquent
+class HasOneOfManyTestPrice extends Model
 {
+    protected $connection = 'mongodb';
     protected $table = 'prices';
     protected $guarded = [];
     public $timestamps = false;
