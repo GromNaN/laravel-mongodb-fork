@@ -123,8 +123,18 @@ class Builder extends BaseBuilder
      */
     public $options = [];
 
+    public const TRANSFORM_QUERY_DATE = 1 << 0;
+    public const TRANSFORM_RESULT_DATE = 1 << 1;
+    public const TRANSFORM_RENAME_QUERY_ROOT_ID = 1 << 2;
+    public const TRANSFORM_RENAME_RESULT_ROOT_ID = 1 << 3;
+    public const TRANSFORM_RENAME_QUERY_EMBED_ID = 1 << 4;
+    public const TRANSFORM_RENAME_RESULT_EMBED_ID = 1 << 5;
+
+    /** @var int-mask-of<self::TRANSFORM_* */
+    private int $transformations = -1;
+
     /**
-     * All of the available clause operators.
+     * All the available clause operators.
      *
      * @var array
      */
@@ -573,6 +583,27 @@ class Builder extends BaseBuilder
         ];
 
         return md5(serialize(array_values($key)));
+    }
+
+    public function disableDateTransformation(): static
+    {
+        $this->transformations &= ~self::TRANSFORM_QUERY_DATE & ~self::TRANSFORM_RESULT_DATE;
+
+        return $this;
+    }
+
+    public function disableRootIdTransformation(): static
+    {
+        $this->transformations &= ~self::TRANSFORM_RENAME_QUERY_ROOT_ID & ~self::TRANSFORM_RENAME_RESULT_ROOT_ID;
+
+        return $this;
+    }
+
+    public function disableEmbedIdTransformation(): static
+    {
+        $this->transformations &= ~self::TRANSFORM_RENAME_QUERY_EMBED_ID & ~self::TRANSFORM_RENAME_RESULT_EMBED_ID;
+
+        return $this;
     }
 
     /** @return ($function is null ? AggregationBuilder : mixed) */
@@ -1763,9 +1794,12 @@ class Builder extends BaseBuilder
         throw new BadMethodCallException('This method is not supported by MongoDB');
     }
 
-    private function aliasIdForQuery(array $values): array
+    private function aliasIdForQuery(array $values, bool $root = true): array
     {
-        if (array_key_exists('id', $values)) {
+        if (
+            ($root && $this->transformations & self::TRANSFORM_RENAME_QUERY_ROOT_ID || ! $root && $this->transformations & self::TRANSFORM_RENAME_QUERY_EMBED_ID)
+            && array_key_exists('id', $values)
+        ) {
             if (array_key_exists('_id', $values) && $values['id'] !== $values['_id']) {
                 throw new InvalidArgumentException('Cannot have both "id" and "_id" fields.');
             }
@@ -1792,7 +1826,10 @@ class Builder extends BaseBuilder
             }
 
             // ".id" subfield are alias for "._id"
-            if (str_ends_with($key, '.id')) {
+            if (
+                $this->transformations & self::TRANSFORM_RENAME_QUERY_EMBED_ID
+                && str_ends_with($key, '.id')
+            ) {
                 $newkey = substr($key, 0, -3) . '._id';
                 if (array_key_exists($newkey, $values) && $value !== $values[$newkey]) {
                     throw new InvalidArgumentException(sprintf('Cannot have both "%s" and "%s" fields.', $key, $newkey));
@@ -1805,8 +1842,8 @@ class Builder extends BaseBuilder
 
         foreach ($values as &$value) {
             if (is_array($value)) {
-                $value = $this->aliasIdForQuery($value);
-            } elseif ($value instanceof DateTimeInterface) {
+                $value = $this->aliasIdForQuery($value, false);
+            } elseif ($this->transformations & self::TRANSFORM_QUERY_DATE && $value instanceof DateTimeInterface) {
                 $value = new UTCDateTime($value);
             }
         }
@@ -1817,42 +1854,49 @@ class Builder extends BaseBuilder
     /**
      * @internal
      *
+     * @param bool $embed True when applied to a sub-document
      * @psalm-param T $values
      *
      * @psalm-return T
      *
      * @template T of array|object
      */
-    public function aliasIdForResult(array|object $values): array|object
+    public function aliasIdForResult(array|object $values, bool $root = false): array|object
     {
         if (is_array($values)) {
-            if (array_key_exists('_id', $values) && ! array_key_exists('id', $values)) {
+            if (
+                ($root && $this->transformations & self::TRANSFORM_RENAME_RESULT_ROOT_ID || ! $root && $this->transformations & self::TRANSFORM_RENAME_QUERY_EMBED_ID)
+                && array_key_exists('_id', $values) && ! array_key_exists('id', $values)
+            ) {
                 $values['id'] = $values['_id'];
                 unset($values['_id']);
             }
 
             foreach ($values as $key => $value) {
-                if ($value instanceof UTCDateTime) {
+                if ($this->transformations & self::TRANSFORM_RESULT_DATE && $value instanceof UTCDateTime) {
                     $values[$key] = Date::instance($value->toDateTime())
                         ->setTimezone(new DateTimeZone(date_default_timezone_get()));
                 } elseif (is_array($value) || is_object($value)) {
-                    $values[$key] = $this->aliasIdForResult($value);
+                    $values[$key] = $this->aliasIdForResult($value, true);
                 }
             }
         }
 
         if ($values instanceof stdClass) {
-            if (property_exists($values, '_id') && ! property_exists($values, 'id')) {
+            if (
+                ($root && $this->transformations & self::TRANSFORM_RENAME_RESULT_ROOT_ID || ! $root && $this->transformations & self::TRANSFORM_RENAME_QUERY_EMBED_ID)
+                && property_exists($values, '_id') && ! property_exists($values, 'id')
+            ) {
                 $values->id = $values->_id;
                 unset($values->_id);
             }
 
             foreach (get_object_vars($values) as $key => $value) {
-                if ($value instanceof UTCDateTime) {
+                if ($this->transformations & self::TRANSFORM_RESULT_DATE && $value instanceof UTCDateTime) {
                     $values->{$key} = Date::instance($value->toDateTime())
                         ->setTimezone(new DateTimeZone(date_default_timezone_get()));
                 } elseif (is_array($value) || is_object($value)) {
-                    $values->{$key} = $this->aliasIdForResult($value);
+                    $values->{$key} = $this->aliasIdForResult($value, true);
                 }
             }
         }
