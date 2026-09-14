@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MongoDB\Laravel\Tests;
 
 use Illuminate\Foundation\Application;
+use MongoDB\Driver\Exception\ConnectionException;
+use MongoDB\Driver\Exception\ConnectionTimeoutException;
 use MongoDB\Driver\Exception\ServerException;
 use MongoDB\Laravel\MongoDBServiceProvider;
 use MongoDB\Laravel\Schema\Builder;
@@ -96,7 +98,13 @@ class TestCase extends OrchestraTestCase
             self::markTestSkipped('Queryable Encryption is not configured on the "mongodb" connection.');
         }
 
-        if (version_compare($connection->getServerVersion(), '8.0', '<')) {
+        try {
+            $version = $connection->getServerVersion();
+        } catch (ConnectionException | ConnectionTimeoutException) {
+            self::markTestSkipped('A MongoDB server is not reachable.');
+        }
+
+        if (version_compare($version, '8.0', '<')) {
             self::markTestSkipped('Queryable Encryption requires MongoDB 8.0 or later.');
         }
     }
