@@ -27,9 +27,9 @@ final class CreateEncryptedCommand extends Command
     public function handle(): int
     {
         $collection = $this->argument('collection');
-        $connection = $this->connection();
 
         try {
+            $connection = $this->connection();
             $config = $this->autoEncryptionConfig($connection);
             $connection->validateAutoEncryptionConfig($config);
 

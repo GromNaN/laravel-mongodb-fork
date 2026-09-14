@@ -27,9 +27,8 @@ final class DiagnoseEncryptedCommand extends Command
 
     public function handle(): int
     {
-        $connection = $this->connection();
-
         try {
+            $connection = $this->connection();
             $config = $this->autoEncryptionConfig($connection);
             $connection->validateAutoEncryptionConfig($config);
         } catch (InvalidArgumentException $e) {

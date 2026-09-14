@@ -152,6 +152,10 @@ class Builder extends \Illuminate\Database\Schema\Builder
             throw new InvalidArgumentException('Queryable Encryption is not enabled on this connection. Configure "driver_options.autoEncryption" with a "keyVaultNamespace" and "kmsProviders" first.');
         }
 
+        if (empty($config['encryptedFieldsMap']) || ! is_array($config['encryptedFieldsMap'])) {
+            throw new InvalidArgumentException('No "encryptedFieldsMap" is configured on this connection to create an encrypted collection.');
+        }
+
         // Normalize both the list and the keyed-by-path field syntaxes to the
         // driver format before validating and creating.
         $normalizedMap = $this->connection->normalizeEncryptedFieldsMap($config['encryptedFieldsMap']);
