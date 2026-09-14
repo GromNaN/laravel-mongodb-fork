@@ -92,9 +92,13 @@ class Connection extends BaseConnection
         // You can pass options directly to the MongoDB constructor
         $options = $config['options'] ?? [];
 
+        // Resolve the database name first: the default alternate key name uses
+        // it while the automatic encryption options are normalized in
+        // createConnection().
+        $this->database = $this->getDefaultDatabaseName($dsn, $config);
+
         // Create the connection
         $this->connection = $this->createConnection($dsn, $config, $options);
-        $this->database = $this->getDefaultDatabaseName($dsn, $config);
 
         // Select database
         $this->db = $this->connection->getDatabase($this->database);
@@ -337,7 +341,11 @@ class Connection extends BaseConnection
 
     /**
      * Compute the alternate key name to use for a field: the declared
-     * keyAltName, or "<collection>.<path>" by default.
+     * keyAltName, or "<database>.<collection>/<path>" by default.
+     *
+     * The database and collection are joined as a MongoDB namespace and the
+     * path is separated by a slash. A slash cannot appear in a database or
+     * collection name, so the name is unambiguous. See DRIVERS-3637.
      *
      * @param  array<string, mixed> $field
      */
@@ -347,7 +355,7 @@ class Connection extends BaseConnection
             return $field['keyAltName'];
         }
 
-        return $collection . '.' . (string) $field['path'];
+        return $this->database . '.' . $collection . '/' . $field['path'];
     }
 
     /**
@@ -364,7 +372,8 @@ class Connection extends BaseConnection
      *   'queryType' => 'equality'], 'billing' => 'object']]].
      *
      * Each field also receives its alternate key name (declared, or
-     * "<collection>.<path>" by default) when it does not carry a keyId.
+     * "<database>.<collection>/<path>" by default) when it does not carry a
+     * keyId.
      *
      * @param  array<string, mixed> $encryptedFieldsMap
      *
@@ -389,8 +398,8 @@ class Connection extends BaseConnection
      * Normalize the "fields" of a single collection into the driver's list
      * form, accepting both the list and keyed-by-path syntaxes. A bare string
      * value is the bsonType of a randomized, non-queryable field. Each field
-     * receives its alternate key name (declared, or "<collection>.<path>" by
-     * default) when it does not carry a keyId.
+     * receives its alternate key name (declared, or "<database>.<collection>/<path>"
+     * by default) when it does not carry a keyId.
      *
      * @param  array<mixed> $fields
      * @param  string       $collection
@@ -465,7 +474,7 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Resolve every field lacking a keyId, minting the data key when it does
+     * Resolve every field lacking a keyId, generating the data key when it does
      * not exist yet. This makes encrypted collection creation idempotent:
      * re-creating a dropped collection reuses the same keys.
      *
@@ -632,7 +641,7 @@ class Connection extends BaseConnection
 
             foreach (($encryptedFields['fields'] ?? []) as $field) {
                 if (is_array($field) && array_key_exists('keyId', $field) && $field['keyId'] === null) {
-                    throw new InvalidArgumentException(sprintf('The encrypted field map for collection "%s" references a field with a null "keyId". Set a "keyAltName" or remove the "keyId" so it is resolved or minted automatically when the collection is created.', $collection));
+                    throw new InvalidArgumentException(sprintf('The encrypted field map for collection "%s" references a field with a null "keyId". Set a "keyAltName" or remove the "keyId" so it is resolved or generated automatically when the collection is created.', $collection));
                 }
             }
         }
@@ -641,7 +650,7 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Get the client-side encryption support used to mint and manage data
+     * Get the client-side encryption support used to generate and manage data
      * encryption keys.
      *
      * This requires automatic encryption to be configured on the connection.

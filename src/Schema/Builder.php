@@ -135,7 +135,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
      * Create an encrypted collection from the encrypted fields map configured
      * on the connection (driver_options.autoEncryption.encryptedFieldsMap).
      *
-     * Data encryption keys are minted for the fields that do not declare a
+     * Data encryption keys are generated for the fields that do not declare a
      * "keyId"; fields that already reference a key keep it.
      *
      * @param  string              $collection Collection name
@@ -164,7 +164,7 @@ class Builder extends \Illuminate\Database\Schema\Builder
         $masterKey = isset($config['masterKey']) && is_array($config['masterKey']) ? $config['masterKey'] : null;
         $clientEncryption = $this->connection->getClientEncryption();
 
-        // Resolve fields declared by keyAltName to their real keyId, minting
+        // Resolve fields declared by keyAltName to their real keyId, generating
         // missing data keys on first creation. Re-creating a dropped
         // collection therefore reuses the same keys.
         $resolvedMap = $this->connection->resolveOrCreateEncryptionKeys([$collection => $map]);

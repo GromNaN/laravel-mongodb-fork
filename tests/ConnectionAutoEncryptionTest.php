@@ -118,7 +118,7 @@ class ConnectionAutoEncryptionTest extends TestCase
             'patients' => ['fields' => [['path' => 'ssn', 'bsonType' => 'string']]],
         ]);
 
-        $this->assertSame('patients.ssn', $normalized['patients']['fields'][0]['keyAltName']);
+        $this->assertSame('unittest.patients/ssn', $normalized['patients']['fields'][0]['keyAltName']);
     }
 
     public function testNormalizeEncryptedFieldsMapPreservesExplicitKeyAltName(): void
@@ -153,7 +153,7 @@ class ConnectionAutoEncryptionTest extends TestCase
         $ssn = $byPath['ssn'];
         $this->assertSame('string', $ssn['bsonType']);
         $this->assertSame('equality', $ssn['queries'][0]['queryType']);
-        $this->assertSame('patients.ssn', $ssn['keyAltName']);
+        $this->assertSame('unittest.patients/ssn', $ssn['keyAltName']);
 
         $billing = $byPath['billing'];
         $this->assertSame('object', $billing['bsonType']);
@@ -229,12 +229,12 @@ class ConnectionAutoEncryptionTest extends TestCase
         $keyId = $first['patients']['fields'][0]['keyId'];
         $this->assertArrayHasKey('keyId', $first['patients']['fields'][0]);
 
-        // Idempotent: the second call reuses the key minted under "patients.ssn".
+        // Idempotent: the second call reuses the key generated under "unittest.patients/ssn".
         $this->assertSame($keyId->getData(), $second['patients']['fields'][0]['keyId']->getData());
 
         // The default alternate name used to bind the key.
         $normalized = $connection->normalizeEncryptedFieldsMap($map);
-        $this->assertSame('patients.ssn', $normalized['patients']['fields'][0]['keyAltName']);
+        $this->assertSame('unittest.patients/ssn', $normalized['patients']['fields'][0]['keyAltName']);
     }
 
     /**
