@@ -59,8 +59,10 @@ class Connection extends BaseConnection
     /**
      * Queryable Encryption support: configuration validation, encryptedFieldsMap
      * normalization, data key management, and the write-time safety guard.
+     * Created lazily, only when automatic encryption is configured, so a plain
+     * connection does not allocate it.
      */
-    private AutoEncryption $autoEncryption;
+    private ?AutoEncryption $autoEncryption = null;
 
     /** @var bool Whether to rename the rename "id" into "_id" for embedded documents. */
     private bool $renameEmbeddedIdField;
@@ -83,8 +85,6 @@ class Connection extends BaseConnection
         // createConnection().
         $this->database = $this->getDefaultDatabaseName($dsn, $config);
 
-        $this->autoEncryption = new AutoEncryption($this, $dsn, $config);
-
         // Create the connection
         $this->connection = $this->createConnection($dsn, $config, $options);
 
@@ -100,6 +100,19 @@ class Connection extends BaseConnection
         $this->useDefaultQueryGrammar();
 
         $this->renameEmbeddedIdField = $config['rename_embedded_id_field'] ?? true;
+    }
+
+    /**
+     * The Queryable Encryption support, created lazily only when automatic
+     * encryption is configured on this connection.
+     */
+    private function encryption(): ?AutoEncryption
+    {
+        if ($this->autoEncryption === null && isset($this->config['driver_options']['autoEncryption'])) {
+            $this->autoEncryption = new AutoEncryption($this, $this->getDsn($this->config), $this->config);
+        }
+
+        return $this->autoEncryption;
     }
 
     /**
@@ -279,7 +292,7 @@ class Connection extends BaseConnection
         // autoEncryption block fails fast at connection time. Capability
         // gating is lazy and only checked when encryption is actually used, so
         // unrelated non-QE features keep working.
-        $driverOptions = $this->autoEncryption->prepareDriverOptions($driverOptions);
+        $driverOptions = $this->encryption()?->prepareDriverOptions($driverOptions) ?? $driverOptions;
 
         return new Client($dsn, $options, $driverOptions);
     }
@@ -293,7 +306,7 @@ class Connection extends BaseConnection
      */
     public function normalizeEncryptedFieldsMap(array $encryptedFieldsMap): array
     {
-        return $this->autoEncryption->normalizeEncryptedFieldsMap($encryptedFieldsMap);
+        return $this->encryption()?->normalizeEncryptedFieldsMap($encryptedFieldsMap) ?? $encryptedFieldsMap;
     }
 
     /**
@@ -307,7 +320,7 @@ class Connection extends BaseConnection
      */
     public function resolveOrCreateEncryptionKeys(array $encryptedFieldsMap): array
     {
-        return $this->autoEncryption->resolveOrCreateEncryptionKeys($encryptedFieldsMap);
+        return $this->encryption()?->resolveOrCreateEncryptionKeys($encryptedFieldsMap) ?? $encryptedFieldsMap;
     }
 
     /**
@@ -318,7 +331,7 @@ class Connection extends BaseConnection
      */
     public function isEncryptionEnabled(array $config): bool
     {
-        return $this->autoEncryption->isEncryptionEnabled($config);
+        return $this->encryption()?->isEncryptionEnabled($config) ?? false;
     }
 
     /**
@@ -330,7 +343,7 @@ class Connection extends BaseConnection
      */
     public function isAutoEncryptionEnabled(?string $collection = null): bool
     {
-        return $this->autoEncryption->isAutoEncryptionEnabled($collection);
+        return $this->encryption()?->isAutoEncryptionEnabled($collection) ?? false;
     }
 
     /**
@@ -339,7 +352,7 @@ class Connection extends BaseConnection
      */
     public function ensureEncryptedCollectionReady(string $collection): void
     {
-        $this->autoEncryption->ensureEncryptedCollectionReady($collection);
+        $this->encryption()?->ensureEncryptedCollectionReady($collection);
     }
 
     /**
@@ -352,7 +365,7 @@ class Connection extends BaseConnection
      */
     public function validateAutoEncryptionConfig(array $autoEncryption): array
     {
-        return $this->autoEncryption->validateAutoEncryptionConfig($autoEncryption);
+        return $this->encryption()?->validateAutoEncryptionConfig($autoEncryption) ?? $autoEncryption;
     }
 
     /**
@@ -365,7 +378,13 @@ class Connection extends BaseConnection
      */
     public function getClientEncryption(): ClientEncryption
     {
-        return $this->autoEncryption->getClientEncryption();
+        $encryption = $this->encryption();
+
+        if ($encryption === null) {
+            throw new InvalidArgumentException('Queryable Encryption is not enabled on this connection.');
+        }
+
+        return $encryption->getClientEncryption();
     }
 
     /**
@@ -375,7 +394,7 @@ class Connection extends BaseConnection
      */
     public function getEncryptionOptions(): array
     {
-        return $this->autoEncryption->getEncryptionOptions();
+        return $this->encryption()?->getEncryptionOptions() ?? [];
     }
 
     /**

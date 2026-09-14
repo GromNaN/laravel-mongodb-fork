@@ -128,7 +128,7 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testNormalizeEncryptedFieldsMapAddsDefaultKeyAltName(): void
     {
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
 
         $normalized = $connection->normalizeEncryptedFieldsMap([
             'patients' => ['fields' => [['path' => 'ssn', 'bsonType' => 'string']]],
@@ -139,7 +139,7 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testNormalizeEncryptedFieldsMapPreservesExplicitKeyAltName(): void
     {
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
 
         $normalized = $connection->normalizeEncryptedFieldsMap([
             'patients' => ['fields' => [['path' => 'ssn', 'bsonType' => 'string', 'keyAltName' => 'my-name']]],
@@ -150,7 +150,7 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testNormalizeEncryptedFieldsMapAcceptsKeyedSyntax(): void
     {
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
 
         $normalized = $connection->normalizeEncryptedFieldsMap([
             'patients' => [
@@ -181,7 +181,7 @@ class ConnectionAutoEncryptionTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
         $connection->normalizeEncryptedFieldsMap([
             'patients' => ['fields' => [['bsonType' => 'string']]],
         ]);
@@ -191,7 +191,7 @@ class ConnectionAutoEncryptionTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
         $connection->normalizeEncryptedFieldsMap([
             'patients' => ['fields' => [['path' => 'ssn', 'queryType' => 'equality']]],
         ]);
@@ -201,7 +201,7 @@ class ConnectionAutoEncryptionTest extends TestCase
     {
         $this->expectException(LogicException::class);
 
-        $connection = new Connection($this->connectionConfig());
+        $connection = new Connection($this->encryptionConnectionConfig());
         $connection->normalizeEncryptedFieldsMap([
             'patients' => ['fields' => [['path' => 'ssn', 'bsonType' => 'string', 'keyId' => 'x', 'keyAltName' => 'y']]],
         ]);
@@ -267,6 +267,22 @@ class ConnectionAutoEncryptionTest extends TestCase
         $config['driver_options'] = ['autoEncryption' => $autoEncryption];
 
         return $config;
+    }
+
+    /**
+     * Build a connection config with a valid, minimal automatic encryption
+     * block (no encryptedFieldsMap), used to reach the pure normalization and
+     * validation methods.
+     *
+     * @return array<string, mixed>
+     */
+    private function encryptionConnectionConfig(): array
+    {
+        return $this->encryptionConfig([
+            'keyVaultNamespace' => self::KEY_VAULT,
+            'kmsProviders' => ['local' => ['key' => base64_encode(random_bytes(96))]],
+            'extraOptions' => ['cryptSharedLibRequired' => false],
+        ]);
     }
 
     /**

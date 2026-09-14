@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MongoDB\Laravel\Encryption;
 
-use Composer\InstalledVersions;
 use InvalidArgumentException;
 use LogicException;
 use MongoDB\BSON\Binary;
@@ -13,7 +12,6 @@ use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Driver\Manager;
 use MongoDB\Driver\Query as DriverQuery;
 use MongoDB\Laravel\Connection;
-use Throwable;
 
 use function array_key_exists;
 use function array_key_first;
@@ -23,11 +21,12 @@ use function in_array;
 use function is_array;
 use function is_string;
 use function phpversion;
-use function preg_match;
 use function sprintf;
 use function str_contains;
 use function strlen;
 use function version_compare;
+
+use WeakReference;
 
 /**
  * Queryable Encryption support: configuration validation, encryptedFieldsMap
@@ -49,11 +48,32 @@ final class AutoEncryption
 
     private ?Manager $plainManager = null;
 
-    public function __construct(
-        private readonly Connection $connection,
-        private readonly string $dsn,
-        private readonly array $config,
-    ) {
+    /**
+     * The owning Connection. Held weakly to avoid a reference cycle (the
+     * Connection holds this AutoEncryption instance).
+     *
+     * @var WeakReference<Connection>
+     */
+    private readonly WeakReference $connection;
+
+    private readonly string $dsn;
+
+    private readonly array $config;
+
+    public function __construct(Connection $connection, string $dsn, array $config)
+    {
+        $this->connection = WeakReference::create($connection);
+        $this->dsn = $dsn;
+        $this->config = $config;
+    }
+
+    /**
+     * The owning Connection. It stays alive while this instance does, because
+     * the Connection is the only strong reference to it.
+     */
+    private function connection(): Connection
+    {
+        return $this->connection->get() ?? throw new LogicException('The owning Connection is no longer available.');
     }
 
     /**
@@ -109,7 +129,7 @@ final class AutoEncryption
      */
     public function isAutoEncryptionEnabled(?string $collection = null): bool
     {
-        $config = $this->connection->getConfig('driver_options.autoEncryption');
+        $config = $this->connection()->getConfig('driver_options.autoEncryption');
 
         if (! is_array($config) || ! $this->isEncryptionEnabled($config)) {
             return false;
@@ -162,7 +182,7 @@ final class AutoEncryption
 
         $names = [];
 
-        foreach ($this->connection->getDatabase()->listCollections(['filter' => ['options.encryptedFields' => ['$exists' => true]]]) as $info) {
+        foreach ($this->connection()->getDatabase()->listCollections(['filter' => ['options.encryptedFields' => ['$exists' => true]]]) as $info) {
             if ($info->getEncryptedFields() !== null) {
                 $names[$info->getName()] = true;
             }
@@ -359,7 +379,7 @@ final class AutoEncryption
             return $field['keyAltName'];
         }
 
-        return $this->connection->getDatabaseName() . '.' . $collection . '/' . $field['path'];
+        return $this->connection()->getDatabaseName() . '.' . $collection . '/' . $field['path'];
     }
 
     /**
@@ -372,19 +392,17 @@ final class AutoEncryption
      */
     public function getClientEncryption(): ClientEncryption
     {
-        $autoEncryption = $this->connection->getConfig('driver_options.autoEncryption');
+        $autoEncryption = $this->connection()->getConfig('driver_options.autoEncryption');
 
         if (! is_array($autoEncryption) || ! $this->isEncryptionEnabled($autoEncryption)) {
             throw new InvalidArgumentException('Queryable Encryption is not enabled on this connection. Configure "driver_options.autoEncryption" with a "keyVaultNamespace" and "kmsProviders" first.');
         }
 
-        $this->ensureQueryableEncryptionLibrary();
-
         $config = $this->validateAutoEncryptionConfig($autoEncryption);
 
         // The key vault client must be free of auto encryption (CSFLE rule),
         // so it cannot be the auto-encryption-enabled connection client.
-        return $this->connection->getClient()->createClientEncryption([
+        return $this->connection()->getClient()->createClientEncryption([
             'keyVaultClient' => $config['keyVaultClient'] ?? $this->plainManager(),
             'keyVaultNamespace' => $config['keyVaultNamespace'],
             'kmsProviders' => $config['kmsProviders'],
@@ -398,7 +416,7 @@ final class AutoEncryption
      */
     public function getEncryptionOptions(): array
     {
-        $autoEncryption = $this->connection->getConfig('driver_options.autoEncryption');
+        $autoEncryption = $this->connection()->getConfig('driver_options.autoEncryption');
 
         return is_array($autoEncryption) ? $autoEncryption : [];
     }
@@ -408,9 +426,16 @@ final class AutoEncryption
      * not exist yet. This makes encrypted collection creation idempotent:
      * re-creating a dropped collection reuses the same keys.
      *
-     * @param  array<string, mixed> $encryptedFieldsMap
+     * @param  array<string, array{fields: list<array<string, mixed>>}> $encryptedFieldsMap
      *
-     * @return array<string, mixed>
+     * @return array<string, array{
+     *     fields: list<array{
+     *         path: string,
+     *         bsonType: string,
+     *         keyId: Binary,
+     *         queries?: list<array<string, mixed>>,
+     *     }>,
+     * }>
      */
     public function resolveOrCreateEncryptionKeys(array $encryptedFieldsMap): array
     {
@@ -458,7 +483,7 @@ final class AutoEncryption
      */
     private function findDataKeyByAltName(string $keyAltName, ?Manager $manager = null): ?Binary
     {
-        $namespace = $this->connection->getConfig('driver_options.autoEncryption.keyVaultNamespace');
+        $namespace = $this->connection()->getConfig('driver_options.autoEncryption.keyVaultNamespace');
 
         if (! is_string($namespace) || ! str_contains($namespace, '.')) {
             return null;
@@ -510,34 +535,6 @@ final class AutoEncryption
 
                 return;
             }
-        }
-    }
-
-    /**
-     * Ensure the installed mongodb/mongodb library is new enough to support
-     * Queryable Encryption. This check is network-free and only fails when
-     * encryption is actually requested.
-     */
-    private function ensureQueryableEncryptionLibrary(): void
-    {
-        try {
-            $version = InstalledVersions::getPrettyVersion('mongodb/mongodb');
-        } catch (Throwable) {
-            return; // Unknown version; rely on the server to reject unsupported operations.
-        }
-
-        if (! is_string($version) || preg_match('/^(\d+)\.\d+\.\d+/', $version, $matches) !== 1) {
-            return;
-        }
-
-        // These floors carry the metadata collection deletion fix the encrypted
-        // collection lifecycle relies upon. Inlined because they are a runtime
-        // implementation detail, not public API; dropped once the composer
-        // constraint requires a newer mongodb/mongodb.
-        $minimum = (int) $matches[1] === 2 ? '2.1.1' : '1.21.2';
-
-        if (version_compare($version, $minimum, '<')) {
-            throw new RuntimeException(sprintf('Queryable Encryption requires mongodb/mongodb %s or later. Installed version is %s.', $minimum, $version));
         }
     }
 }
