@@ -7,11 +7,14 @@ namespace MongoDB\Laravel\Tests;
 use InvalidArgumentException;
 use LogicException;
 use MongoDB\Driver\ClientEncryption;
+use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Laravel\Connection;
 
 use function base64_encode;
 use function env;
+use function phpversion;
 use function random_bytes;
+use function version_compare;
 
 class ConnectionAutoEncryptionTest extends TestCase
 {
@@ -112,8 +115,6 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testEnsureEncryptedCollectionReadySkipsUnmappedCollection(): void
     {
-        // No encryptedFieldsMap: the connection stays valid on any ext-mongodb
-        // version (no alternate key name is referenced at construction time).
         $connection = new Connection($this->encryptionConnectionConfig());
 
         // A collection that is not in the encryptedFieldsMap is not guarded,
@@ -121,6 +122,25 @@ class ConnectionAutoEncryptionTest extends TestCase
         $connection->ensureEncryptedCollectionReady('patients');
 
         $this->assertTrue(true);
+    }
+
+    public function testReferenceByKeyAltNameRequiresNewEnoughExtension(): void
+    {
+        $extVersion = phpversion('mongodb');
+
+        if (is_string($extVersion) && version_compare($extVersion, '2.4.0', '>=')) {
+            $this->markTestSkipped('ext-mongodb >= 2.4.0 resolves keyAltName aliases itself.');
+        }
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('keyAltName requires ext-mongodb 2.4.0');
+
+        new Connection($this->encryptionConfig([
+            'keyVaultNamespace' => self::KEY_VAULT,
+            'kmsProviders' => ['local' => ['key' => base64_encode(random_bytes(96))]],
+            'extraOptions' => ['cryptSharedLibRequired' => false],
+            'encryptedFieldsMap' => ['users' => ['fields' => [['path' => 'ssn', 'bsonType' => 'string']]]],
+        ]));
     }
 
     public function testNormalizeEncryptedFieldsMapAddsDefaultKeyAltName(): void
