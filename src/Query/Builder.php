@@ -771,6 +771,8 @@ class Builder extends BaseBuilder
             $values = [$values];
         }
 
+        $this->connection->ensureEncryptedCollectionReady($this->collection->getCollectionName());
+
         $values = array_map(
             $this->grammar->prepareFieldsForQuery(...),
             $values,
@@ -787,6 +789,8 @@ class Builder extends BaseBuilder
     #[Override]
     public function insertGetId(array $values, $sequence = null)
     {
+        $this->connection->ensureEncryptedCollectionReady($this->collection->getCollectionName());
+
         $options = $this->inheritConnectionOptions();
 
         $values = $this->grammar->prepareFieldsForQuery($values);
@@ -1206,6 +1210,7 @@ class Builder extends BaseBuilder
 
         $wheres = $this->compileWheres();
         $wheres = $this->grammar->prepareFieldsForQuery($wheres);
+        $this->connection->ensureEncryptedCollectionReady($this->collection->getCollectionName());
         // Queryable Encryption forbids multi-document updates, so encrypted
         // collections must use single-document updates. Unmapped collections
         // keep the multi-document behavior.
