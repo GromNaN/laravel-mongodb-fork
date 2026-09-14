@@ -371,12 +371,6 @@ trait DocumentModel
     {
         $attributes = parent::attributesToArray();
 
-        // Queryable Encryption stores a server-managed "safeContent" array in
-        // the document. It is an implementation detail and must never be
-        // exposed through serialization. Bare attribute access remains
-        // possible through getAttributes().
-        unset($attributes['__safeContent__']);
-
         // Because the original Eloquent never returns objects, we convert
         // MongoDB related objects to a string representation. This kind
         // of mimics the SQL behaviour so that dates are formatted

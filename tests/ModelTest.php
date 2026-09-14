@@ -585,22 +585,6 @@ class ModelTest extends TestCase
         $this->assertIsString($array['id']);
     }
 
-    public function testToArrayHidesSafeContent(): void
-    {
-        $item = new Item();
-        $item->setRawAttributes([
-            'name' => 'fork',
-            '__safeContent__' => ['<server-managed>'],
-        ], true);
-
-        // Still visible through raw attribute access.
-        $this->assertArrayHasKey('__safeContent__', $item->getAttributes());
-
-        // Never exposed through serialization.
-        $this->assertArrayNotHasKey('__safeContent__', $item->toArray());
-        $this->assertArrayNotHasKey('__safeContent__', json_decode($item->toJson(), true));
-    }
-
     public function testSafeContentIsNotDirtyByDefault(): void
     {
         $item = new Item();

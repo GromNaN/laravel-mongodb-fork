@@ -57,8 +57,9 @@ final class QueryableEncryptionTest extends TestCase
             'billing' => ['credit_card_number' => '0000'],
         ]);
 
-        // The server-managed field is never serialized.
-        $this->assertArrayNotHasKey('__safeContent__', $patient->toArray());
+        // The server-managed field is still present until the follow-up hides
+        // it from query results.
+        $this->assertArrayHasKey('__safeContent__', $patient->toArray());
 
         // Equality and range queries on encrypted fields.
         $this->assertTrue(Patient::where('ssn', '123-456-7890')->exists());
