@@ -24,9 +24,9 @@ class Patient extends Model
 
     protected $fillable = ['ssn', 'billing_amount', 'billing'];
 
+    // The field is encrypted as an int per the encryptedFieldsMap; cast
+    // so form/string input is stored as an integer.
     protected $casts = [
-        // The field is encrypted as an int per the encryptedFieldsMap; cast
-        // so form/string input is stored as an integer.
         'billing_amount' => 'integer',
     ];
 }

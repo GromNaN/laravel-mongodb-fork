@@ -43,7 +43,6 @@ use function array_merge;
 use function date_default_timezone_set;
 use function get_debug_type;
 use function hex2bin;
-use function json_decode;
 use function sleep;
 use function sort;
 use function strlen;

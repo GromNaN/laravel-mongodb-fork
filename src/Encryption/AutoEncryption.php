@@ -13,6 +13,7 @@ use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Driver\Manager;
 use MongoDB\Driver\Query as DriverQuery;
 use MongoDB\Laravel\Connection;
+use WeakReference;
 
 use function array_key_exists;
 use function array_key_first;
@@ -26,8 +27,6 @@ use function sprintf;
 use function str_contains;
 use function strlen;
 use function version_compare;
-
-use WeakReference;
 
 /**
  * Queryable Encryption support: configuration validation, encryptedFieldsMap
@@ -57,15 +56,9 @@ final class AutoEncryption
      */
     private readonly WeakReference $connection;
 
-    private readonly string $dsn;
-
-    private readonly array $config;
-
-    public function __construct(Connection $connection, string $dsn, array $config)
+    public function __construct(Connection $connection, private readonly string $dsn, private readonly array $config)
     {
         $this->connection = WeakReference::create($connection);
-        $this->dsn = $dsn;
-        $this->config = $config;
     }
 
     /**
