@@ -7,7 +7,6 @@ namespace MongoDB\Laravel\Encryption;
 use InvalidArgumentException;
 use LogicException;
 use MongoDB\BSON\Binary;
-use MongoDB\Database;
 use MongoDB\Driver\ClientEncryption;
 use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Driver\Manager;
@@ -37,15 +36,6 @@ use function version_compare;
  */
 final class AutoEncryption
 {
-    /**
-     * Collections confirmed to be created as encrypted collections. The full
-     * set is loaded lazily in a single listCollections call so every mapped
-     * collection is checked in one round trip, then cached.
-     *
-     * @var array<string, true>|null
-     */
-    private ?array $encryptedCollectionNames = null;
-
     private ?Manager $plainManager = null;
 
     /**
@@ -134,59 +124,6 @@ final class AutoEncryption
         }
 
         return isset($config['encryptedFieldsMap'][$collection]);
-    }
-
-    /**
-     * Ensure a mapped collection exists as an encrypted collection before any
-     * write. When automatic encryption is configured for a collection that is
-     * not created with server-side encryptedFields, writes store the mapped
-     * fields in plaintext without any error. This guard fails fast instead,
-     * pointing to the encrypted collection creation step. See DRIVERS-3647.
-     *
-     * Unmapped and non-encrypted collections are ignored. The names of all
-     * encrypted collections are fetched once in a single query, then cached,
-     * so every mapped collection is validated in one round trip.
-     */
-    public function ensureEncryptedCollectionReady(string $collection): void
-    {
-        if (! $this->isAutoEncryptionEnabled($collection)) {
-            return;
-        }
-
-        if (isset($this->encryptedCollectionNames()[$collection])) {
-            return;
-        }
-
-        throw new LogicException(
-            sprintf('Collection "%s" is mapped for automatic encryption but is not created as an encrypted collection. Run "php artisan mongodb:encrypted:create %s" or "Schema::createEncrypted(\'%s\')" before writing, otherwise the fields are stored in plaintext. See DRIVERS-3647.', $collection, $collection, $collection),
-        );
-    }
-
-    /**
-     * The names of every collection in this database created as an encrypted
-     * collection. Loaded lazily from a single listCollections call and cached.
-     *
-     * @return array<string, true>
-     */
-    private function encryptedCollectionNames(): array
-    {
-        if ($this->encryptedCollectionNames !== null) {
-            return $this->encryptedCollectionNames;
-        }
-
-        $names = [];
-
-        // Read the encrypted collection metadata through a plain manager, as
-        // the spec does, instead of the auto-encrypting connection client.
-        $database = new Database($this->plainManager(), $this->connection()->getDatabaseName());
-
-        foreach ($database->listCollections(['filter' => ['options.encryptedFields' => ['$exists' => true]]]) as $info) {
-            if ($info->getEncryptedFields() !== null) {
-                $names[$info->getName()] = true;
-            }
-        }
-
-        return $this->encryptedCollectionNames = $names;
     }
 
     /**

@@ -113,17 +113,6 @@ class ConnectionAutoEncryptionTest extends TestCase
         $connection->getClientEncryption();
     }
 
-    public function testEnsureEncryptedCollectionReadySkipsUnmappedCollection(): void
-    {
-        $connection = new Connection($this->encryptionConnectionConfig());
-
-        // A collection that is not in the encryptedFieldsMap is not guarded,
-        // so the check returns without any server call.
-        $connection->ensureEncryptedCollectionReady('patients');
-
-        $this->assertTrue(true);
-    }
-
     public function testReferenceByKeyAltNameRequiresNewEnoughExtension(): void
     {
         if (version_compare(phpversion('mongodb'), '2.4.0', '>=')) {

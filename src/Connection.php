@@ -347,15 +347,6 @@ class Connection extends BaseConnection
     }
 
     /**
-     * Ensure a mapped collection exists as an encrypted collection before any
-     * write. See {@see AutoEncryption::ensureEncryptedCollectionReady()}.
-     */
-    public function ensureEncryptedCollectionReady(string $collection): void
-    {
-        $this->encryption()?->ensureEncryptedCollectionReady($collection);
-    }
-
-    /**
      * Validate the shape of the driver_options.autoEncryption configuration and
      * return a normalized copy.
      *
