@@ -7,6 +7,7 @@ namespace MongoDB\Laravel\Encryption;
 use InvalidArgumentException;
 use LogicException;
 use MongoDB\BSON\Binary;
+use MongoDB\Database;
 use MongoDB\Driver\ClientEncryption;
 use MongoDB\Driver\Exception\RuntimeException;
 use MongoDB\Driver\Manager;
@@ -182,7 +183,11 @@ final class AutoEncryption
 
         $names = [];
 
-        foreach ($this->connection()->getDatabase()->listCollections(['filter' => ['options.encryptedFields' => ['$exists' => true]]]) as $info) {
+        // Read the encrypted collection metadata through a plain manager, as
+        // the spec does, instead of the auto-encrypting connection client.
+        $database = new Database($this->plainManager(), $this->connection()->getDatabaseName());
+
+        foreach ($database->listCollections(['filter' => ['options.encryptedFields' => ['$exists' => true]]]) as $info) {
             if ($info->getEncryptedFields() !== null) {
                 $names[$info->getName()] = true;
             }
