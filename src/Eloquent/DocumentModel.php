@@ -259,7 +259,7 @@ trait DocumentModel
     {
         $key = (string) $key;
 
-        // The encrypted respected field is managed by the server. Reject any
+        // The encrypted reserved field is managed by the server. Reject any
         // write, including a direct assignment, so it can never be forged or
         // desynchronized by the application.
         if ($key === '__safeContent__') {

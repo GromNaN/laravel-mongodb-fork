@@ -153,7 +153,7 @@ final class AutoEncryption
                 throw new InvalidArgumentException('The "autoEncryption.kmsProviders.local.key" value is required and must be a base64-encoded 96-byte master key.');
             }
 
-            $decoded = base64_decode($key, true) ?: base64_decode($key);
+            $decoded = base64_decode($key, true);
             if ($decoded === false) {
                 throw new InvalidArgumentException('The "autoEncryption.kmsProviders.local.key" value is not valid base64.');
             }
