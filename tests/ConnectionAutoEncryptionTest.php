@@ -112,12 +112,9 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testEnsureEncryptedCollectionReadySkipsUnmappedCollection(): void
     {
-        $connection = new Connection($this->encryptionConfig([
-            'keyVaultNamespace' => self::KEY_VAULT,
-            'kmsProviders' => ['local' => ['key' => base64_encode(random_bytes(96))]],
-            'extraOptions' => ['cryptSharedLibRequired' => false],
-            'encryptedFieldsMap' => ['users' => ['fields' => [['path' => 'email', 'bsonType' => 'string']]]],
-        ]));
+        // No encryptedFieldsMap: the connection stays valid on any ext-mongodb
+        // version (no alternate key name is referenced at construction time).
+        $connection = new Connection($this->encryptionConnectionConfig());
 
         // A collection that is not in the encryptedFieldsMap is not guarded,
         // so the check returns without any server call.
