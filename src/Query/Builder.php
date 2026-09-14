@@ -839,6 +839,8 @@ class Builder extends BaseBuilder
 
         $this->applyBeforeQueryCallbacks();
 
+        $this->connection->ensureEncryptedCollectionReady($this->collection->getCollectionName());
+
         $options = $this->inheritConnectionOptions();
         $uniqueBy = array_fill_keys((array) $uniqueBy, 1);
 
