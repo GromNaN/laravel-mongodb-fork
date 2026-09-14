@@ -508,7 +508,26 @@ final class AutoEncryption
      */
     private function plainManager(): Manager
     {
-        return $this->plainManager ??= new Manager($this->dsn, $this->config['options'] ?? []);
+        if ($this->plainManager === null) {
+            $options = $this->config['options'] ?? [];
+
+            // Apply the top-level credentials, mirroring Connection::createConnection().
+            if (! isset($options['username']) && ! empty($this->config['username'])) {
+                $options['username'] = $this->config['username'];
+            }
+
+            if (! isset($options['password']) && ! empty($this->config['password'])) {
+                $options['password'] = $this->config['password'];
+            }
+
+            $driverOptions = [
+                'driver' => ['name' => 'laravel-mongodb', 'version' => Connection::getVersion()],
+            ];
+
+            $this->plainManager = new Manager($this->dsn, $options, $driverOptions);
+        }
+
+        return $this->plainManager;
     }
 
     /**
