@@ -126,9 +126,7 @@ class ConnectionAutoEncryptionTest extends TestCase
 
     public function testReferenceByKeyAltNameRequiresNewEnoughExtension(): void
     {
-        $extVersion = phpversion('mongodb');
-
-        if (is_string($extVersion) && version_compare($extVersion, '2.4.0', '>=')) {
+        if (version_compare(phpversion('mongodb'), '2.4.0', '>=')) {
             $this->markTestSkipped('ext-mongodb >= 2.4.0 resolves keyAltName aliases itself.');
         }
 
