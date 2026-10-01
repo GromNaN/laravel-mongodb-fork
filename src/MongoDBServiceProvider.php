@@ -35,6 +35,7 @@ use function assert;
 use function class_exists;
 use function config;
 use function get_debug_type;
+use function is_array;
 use function is_string;
 use function sprintf;
 
@@ -48,6 +49,18 @@ class MongoDBServiceProvider extends ServiceProvider
         Model::setConnectionResolver($this->app['db']);
 
         Model::setEventDispatcher($this->app['events']);
+
+        // Only expose the Queryable Encryption CLI when a MongoDB connection is
+        // configured with automatic encryption; otherwise the setup contract
+        // (keys-first, config map) is not usable. Registered in boot() so the
+        // connection configuration is fully loaded.
+        if ($this->supportsQueryableEncryption()) {
+            $this->commands([
+                Encryption\Commands\CreateCollectionCommand::class,
+                Encryption\Commands\RewrapDataKeysCommand::class,
+                Encryption\Commands\StatusCommand::class,
+            ]);
+        }
     }
 
     /**
@@ -88,11 +101,12 @@ class MongoDBServiceProvider extends ServiceProvider
                 $store = new MongoStore(
                     $app['db']->connection($config['connection'] ?? null),
                     $config['collection'] ?? 'cache',
-                    $this->getPrefix($config), // @phpstan-ignore arguments.count (closure is bound to CacheManager at runtime)
+                    $this->getPrefix($config),
                     $app['db']->connection($config['lock_connection'] ?? $config['connection'] ?? null),
                     $config['lock_collection'] ?? ($config['collection'] ?? 'cache') . '_locks',
                     $config['lock_lottery'] ?? [2, 100],
                     $config['lock_timeout'] ?? 86400,
+                    $app['config']->get('cache.serializable_classes'),
                 );
 
                 return $cache->repository($store, $config);
@@ -109,6 +123,23 @@ class MongoDBServiceProvider extends ServiceProvider
         $this->registerFlysystemAdapter();
         $this->registerScoutEngine();
         $this->registerBoostTools();
+    }
+
+    /**
+     * Determine whether at least one MongoDB connection config uses automatic
+     * encryption (driver_options.autoEncryption).
+     */
+    private function supportsQueryableEncryption(): bool
+    {
+        foreach (config('database.connections', []) as $connection) {
+            $autoEncryption = is_array($connection) ? ($connection['driver_options']['autoEncryption'] ?? null) : null;
+
+            if (($connection['driver'] ?? null) === 'mongodb' && is_array($autoEncryption)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function registerFlysystemAdapter(): void

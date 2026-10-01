@@ -9,13 +9,9 @@ on:
       - '[0-9]+.[0-9x]+'
       - feature/*
 
-env:
-  MONGODB_EXT_V1: mongodb-1.21.0
-  MONGODB_EXT_V2: stable
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     name: PHP/${{ matrix.php }} Laravel/${{ matrix.laravel }} Driver/${{ matrix.driver }}
 
@@ -38,33 +34,23 @@ jobs:
       - name: Create MongoDB Atlas Local
         timeout-minutes: 5
         run: |
-          docker run --name mongodb -p 27017:27017 --detach mongodb/mongodb-atlas-local:latest
-          until docker exec --tty mongodb mongosh --eval "db.runCommand({ ping: 1 })"; do
-            sleep 1
-          done
-          docker exec --tty mongodb mongosh --eval "db.createCollection('connection_test')"
-          until docker exec --tty mongodb mongosh --eval "db.getCollection('connection_test').createSearchIndex({mappings:{dynamic: true}})"; do
-            sleep 1
-          done
-          until docker exec --tty mongodb mongosh --eval "db.runCommand({ serverStatus: 1 })"; do
-            sleep 1
-          done
+          docker run --name mongodb -p 27017:27017 \
+              -e VOYAGE_API_KEY=${{ secrets.VOYAGE_API_KEY }} \
+              -e EMBEDDING_PROVIDER_ENDPOINT=https://api.voyageai.com/v1/embeddings \
+              --detach mongodb/mongodb-atlas-local:latest
+          until docker exec --tty mongodb mongosh --eval "db.hello().isWritablePrimary" | grep -q true; do sleep 1; done
+          until docker exec --tty mongodb mongosh --eval "db.getCollection('connection_test').insertOne({})"; do sleep 1; done
+          until docker exec --tty mongodb mongosh --eval "db.getCollection('connection_test').createSearchIndex({mappings:{dynamic: true}})"; do sleep 1; done
+          docker exec --tty mongodb mongosh --eval "db.getCollection('connection_test').drop()"
+          until docker exec --tty mongodb mongosh --eval "db.runCommand({ serverStatus: 1 })"; do sleep 1; done
 
-      - name: Setup cache environment
-        id: extcache
-        uses: shivammathur/cache-extensions@v1
+      - name: Setup PHP with MongoDB extension
+        uses: ./.github/actions/setup-php
         with:
           php-version: ${{ matrix.php }}
-          extensions: ${{ matrix.driver == 1 && env.MONGODB_EXT_V1 || env.MONGODB_EXT_V2 }}
-          key: extcache-v1
-
-      - name: Installing php
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: curl,mbstring,xdebug,${{ matrix.driver == 1 && env.MONGODB_EXT_V1 || env.MONGODB_EXT_V2 }}
+          driver: ${{ matrix.driver }}
+          extensions: curl,mbstring,xdebug
           coverage: xdebug
-          tools: composer
 
       - name: Show Docker version
         if: ${{ runner.debug }}

@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace MongoDB\Laravel\Eloquent;
 
+use BadMethodCallException;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use DateTimeZone;
 use Illuminate\Contracts\Queue\QueueableCollection;
 use Illuminate\Contracts\Queue\QueueableEntity;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Concerns\HasAttributes;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
@@ -22,7 +25,10 @@ use MongoDB\BSON\Decimal128;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\Type;
 use MongoDB\BSON\UTCDateTime;
+use MongoDB\Laravel\Eloquent\Model as MongoDBModel;
+use MongoDB\Laravel\Encryption\AutoEncryption;
 use MongoDB\Laravel\Query\Builder as QueryBuilder;
+use ReflectionProperty;
 use Stringable;
 
 use function array_key_exists;
@@ -92,6 +98,30 @@ trait DocumentModel
         }
 
         return $value;
+    }
+
+    /** @inheritdoc */
+    public function initializeModelAttributes()
+    {
+        if (! method_exists(parent::class, 'initializeModelAttributes')) {
+            throw new BadMethodCallException(sprintf('Method %s::initializeModelAttributes() requires Laravel 13 or later. It is called by the model constructor and must not be called directly.', static::class));
+        }
+
+        parent::initializeModelAttributes();
+
+        $keyType = static::resolveClassAttribute(Table::class)?->keyType;
+
+        if ($keyType === null) {
+            return;
+        }
+
+        $declaringClass = (new ReflectionProperty($this, 'keyType'))->getDeclaringClass()->getName();
+
+        if ($declaringClass !== Model::class && $declaringClass !== MongoDBModel::class) {
+            return;
+        }
+
+        $this->keyType = $keyType;
     }
 
     /** @inheritdoc */
@@ -177,7 +207,7 @@ trait DocumentModel
             method_exists($this, $key)
             && ! method_exists(Model::class, $key)
             && ! method_exists(DocumentModel::class, $key)
-            && ! $this->hasAttributeGetMutator($key)
+            && ! $this->hasAttributeMutator($key)
         ) {
             return $this->getRelationValue($key);
         }
@@ -230,6 +260,15 @@ trait DocumentModel
     {
         $key = (string) $key;
 
+        // The encrypted reserved field is managed by the server. Reject any
+        // write, including a direct assignment or a dotted sub-path, so it can
+        // never be forged or desynchronized by the application.
+        if (AutoEncryption::isSafeContentKey($key)) {
+            throw new MassAssignmentException(
+                sprintf('The reserved field [%s] is managed by the server and cannot be set on model [%s].', '__safeContent__', static::class),
+            );
+        }
+
         $casts = $this->getCasts();
         if (array_key_exists($key, $casts)) {
             $castType = $this->getCastType($key);
@@ -242,9 +281,13 @@ trait DocumentModel
             };
         }
 
-        // Convert _id to ObjectID.
-        if (($key === '_id' || $key === 'id') && is_string($value) && strlen($value) === 24) {
-            $value = $this->newBaseQueryBuilder()->convertKey($value);
+        // Reject a MongoDB operator as a primary key, then convert _id to ObjectID.
+        if ($key === '_id' || $key === 'id') {
+            QueryBuilder::assertKeyIsNotOperator($value);
+
+            if (is_string($value) && strlen($value) === 24) {
+                $value = $this->newBaseQueryBuilder()->convertKey($value);
+            }
         }
 
         // Support keys in dot notation.
@@ -416,6 +459,13 @@ trait DocumentModel
     public function offsetUnset($offset): void
     {
         $offset = (string) $offset;
+
+        // Reject attempts to unset the server-managed encrypted field.
+        if (AutoEncryption::isSafeContentKey($offset)) {
+            throw new MassAssignmentException(
+                sprintf('The reserved field [%s] is managed by the server and cannot be unset on model [%s].', '__safeContent__', static::class),
+            );
+        }
 
         if (str_contains($offset, '.')) {
             // Update the field in the subdocument

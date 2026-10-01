@@ -30,7 +30,7 @@ return [
 
 ```
 DB_CONNECTION=mongodb
-MONGODB_URI="mongodb+srv://user:pass@cluster0.mongodb.net/"
+MONGODB_URI="mongodb+srv://user:pass@cluster0.mongodb.net/?retryWrites=true&w=majority"
 MONGODB_DATABASE=laravel
 ```
 
@@ -61,8 +61,12 @@ $collection = DB::connection('mongodb')->getCollection('logs');
 // note: ->collection() does not exist; use ->table() for the query builder
 ```
 
-## Connection pooling and timeouts
+## Timeouts
 
 ```
-mongodb+srv://.../db?maxPoolSize=50&serverSelectionTimeoutMS=5000&socketTimeoutMS=30000
+mongodb+srv://.../db?serverSelectionTimeoutMS=5000&socketTimeoutMS=30000
 ```
+
+`maxPoolSize` and `minPoolSize` have no effect. The PHP extension drives
+libmongoc in single-threaded mode, which holds at most one socket per server
+and implements no connection pool.

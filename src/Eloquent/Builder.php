@@ -15,6 +15,7 @@ use MongoDB\Builder\Type\SearchOperatorInterface;
 use MongoDB\Driver\CursorInterface;
 use MongoDB\Driver\Exception\BulkWriteException;
 use MongoDB\Laravel\Connection;
+use MongoDB\Laravel\Helpers\QueriesRelationshipAggregates;
 use MongoDB\Laravel\Helpers\QueriesRelationships;
 use MongoDB\Laravel\Query\AggregationBuilder;
 use MongoDB\Model\BSONDocument;
@@ -38,6 +39,7 @@ use function value;
 class Builder extends EloquentBuilder
 {
     use QueriesRelationships;
+    use QueriesRelationshipAggregates;
 
     private const DUPLICATE_KEY_ERROR = 11000;
 
@@ -120,13 +122,25 @@ class Builder extends EloquentBuilder
     public function vectorSearch(
         string $index,
         string $path,
-        array $queryVector,
-        int $limit,
+        array|null $queryVector = null,
+        int $limit = 10,
         bool $exact = false,
         QueryInterface|array $filter = [],
         int|null $numCandidates = null,
+        string|null $query = null,
+        string|null $model = null,
     ): Collection {
-        $results = $this->toBase()->vectorSearch($index, $path, $queryVector, $limit, $exact, $filter, $numCandidates);
+        $results = $this->toBase()->vectorSearch(
+            index: $index,
+            path: $path,
+            limit: $limit,
+            queryVector: $queryVector,
+            exact: $exact,
+            filter: $filter,
+            numCandidates: $numCandidates,
+            query: $query,
+            model: $model,
+        );
 
         return $this->model->hydrate($results->all());
     }

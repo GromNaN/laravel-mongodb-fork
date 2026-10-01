@@ -9,13 +9,9 @@ on:
       - '[0-9]+.[0-9x]+'
       - feature/*
 
-env:
-  MONGODB_EXT_V1: mongodb-1.21.0
-  MONGODB_EXT_V2: stable
-
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     name: PHP/${{ matrix.php }} Laravel/${{ matrix.laravel }} Driver/${{ matrix.driver }} Server/${{ matrix.mongodb }} ${{ matrix.mode }}
 
@@ -38,15 +34,19 @@ jobs:
           - php: '8.2'
             laravel: 12.*
             mongodb: '4.4'
+            driver: 2
           - php: '8.2'
             laravel: 12.*
             mongodb: '5.0'
+            driver: 2
           - php: '8.2'
             laravel: 12.*
             mongodb: '6.0'
+            driver: 2
           - php: '8.2'
             laravel: 12.*
             mongodb: '7.0'
+            driver: 2
         exclude:
           - laravel: '13.*'
             php: '8.2'
@@ -55,6 +55,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Create MongoDB Replica Set
+        timeout-minutes: 5
         run: |
           docker run --name mongodb -p 27017:27017 -e MONGO_INITDB_DATABASE=unittest --detach mongo:${{ matrix.mongodb }} mongod --replSet rs --setParameter transactionLifetimeLimitSeconds=5
 
@@ -69,21 +70,33 @@ jobs:
           if [ "${{ matrix.mongodb }}" = "4.4" ]; then MONGOSH_BIN="mongo"; else MONGOSH_BIN="mongosh"; fi
           docker exec --tty mongodb $MONGOSH_BIN --eval "db.runCommand({ serverStatus: 1 })"
 
-      - name: Setup cache environment
-        id: extcache
-        uses: shivammathur/cache-extensions@v1
+      - name: Setup PHP with MongoDB extension
+        uses: ./.github/actions/setup-php
         with:
           php-version: ${{ matrix.php }}
-          extensions: ${{ matrix.driver == 1 && env.MONGODB_EXT_V1 || env.MONGODB_EXT_V2 }}
-          key: extcache-v1
-
-      - name: Installing php
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: curl,mbstring,xdebug,${{ matrix.driver == 1 && env.MONGODB_EXT_V1 || env.MONGODB_EXT_V2 }}
+          driver: ${{ matrix.driver }}
+          extensions: curl,mbstring,xdebug
           coverage: xdebug
-          tools: composer
+
+      - name: Resolve crypt_shared
+        id: crypt-shared
+        if: matrix.mongodb == '8.0'
+        run: php -d display_errors=stderr .github/scripts/crypt_shared_version.php --target ubuntu2404 >> "$GITHUB_OUTPUT"
+
+      - name: Cache crypt_shared library
+        if: matrix.mongodb == '8.0'
+        uses: actions/cache@v6
+        with:
+          path: /tmp/crypt_shared
+          key: crypt-shared-ubuntu2404-${{ steps.crypt-shared.outputs.version }}
+
+      - name: Install crypt_shared library
+        if: matrix.mongodb == '8.0'
+        run: |
+          library=$(php -d display_errors=stderr .github/scripts/crypt_shared_download.php \
+            --url "${{ steps.crypt-shared.outputs.url }}" \
+            --sha256 "${{ steps.crypt-shared.outputs.sha256 }}")
+          echo "CRYPT_SHARED_LIB_PATH=${library}" >> "$GITHUB_ENV"
 
       - name: Show Docker version
         if: ${{ runner.debug }}

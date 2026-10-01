@@ -9,6 +9,7 @@ use BadMethodCallException;
 use Closure;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Tests\Database\DatabaseQueryBuilderTest;
 use InvalidArgumentException;
 use LogicException;
@@ -54,6 +55,24 @@ class BuilderTest extends TestCase
         }
 
         // Compare with assertEquals because the query can contain BSON objects.
+        $this->assertEquals($expected, $mql, var_export($mql, true));
+    }
+
+    #[DataProvider('provideConnectionOptions')]
+    public function testConnectionOptionsAreInheritedByMql(array $expected, Closure $build, array $config): void
+    {
+        $builder = $build($this->getBuilder(true, $config));
+        $this->assertInstanceOf(Builder::class, $builder);
+        $mql = $builder->toMql();
+
+        if (isset($expected['find'][1])) {
+            $expected['find'][1]['typeMap'] = ['root' => 'object', 'document' => 'array'];
+        }
+
+        if (isset($expected['aggregate'][1])) {
+            $expected['aggregate'][1]['typeMap'] = ['root' => 'object', 'document' => 'array'];
+        }
+
         $this->assertEquals($expected, $mql, var_export($mql, true));
     }
 
@@ -200,6 +219,60 @@ class BuilderTest extends TestCase
             fn (Builder $builder) => $builder
                 ->where('foo', '$type', 2)
                 ->orWhere('foo', '$type', 4),
+        ];
+
+        yield 'where = with operator array is wrapped in $eq' => [
+            ['find' => [['token' => ['$eq' => ['$ne' => null]]], []]],
+            fn (Builder $builder) => $builder->where('token', '=', ['$ne' => null]),
+        ];
+
+        yield 'where _id = with plain composite array is not wrapped' => [
+            ['find' => [['_id' => ['tenant' => 1, 'seq' => 2]], []]],
+            fn (Builder $builder) => $builder->where('_id', '=', ['tenant' => 1, 'seq' => 2]),
+        ];
+
+        yield 'where with 2-arg operator array is unchanged' => [
+            ['find' => [['token' => ['$ne' => null]], []]],
+            fn (Builder $builder) => $builder->where('token', ['$ne' => null]),
+        ];
+
+        yield 'where = with plain array is unchanged' => [
+            ['find' => [['tags' => ['a', 'b']], []]],
+            fn (Builder $builder) => $builder->where('tags', '=', ['a', 'b']),
+        ];
+
+        yield 'where = with nested operator is wrapped in $eq' => [
+            ['find' => [['meta' => ['$eq' => ['role' => ['$in' => ['admin']]]]], []]],
+            fn (Builder $builder) => $builder->where('meta', '=', ['role' => ['$in' => ['admin']]]),
+        ];
+
+        // The "=" that Laravel injects when expanding where(array) is not an operator
+        // chosen by the caller, so it must not be hardened into $eq.
+        yield 'where array shorthand with operator array is unchanged' => [
+            ['find' => [['tags' => ['$in' => ['a']]], []]],
+            fn (Builder $builder) => $builder->where(['tags' => ['$in' => ['a']]]),
+        ];
+
+        yield 'where array shorthand with $or is unchanged' => [
+            ['find' => [['$or' => [['a' => 1], ['b' => ['$ne' => null]]]], []]],
+            fn (Builder $builder) => $builder->where(['$or' => [['a' => 1], ['b' => ['$ne' => null]]]]),
+        ];
+
+        // Numeric keys hold [column, operator, value] tuples, where the operator is
+        // authored by the caller, so they keep the regular where() behaviour.
+        yield 'where array shorthand with operator tuples' => [
+            [
+                'find' => [
+                    [
+                        '$and' => [
+                            ['price' => ['$gt' => 100]],
+                            ['tag' => ['$all' => ['a', 'b']]],
+                        ],
+                    ],
+                    [], // options
+                ],
+            ],
+            fn (Builder $builder) => $builder->where([['price', '>', 100], ['tag', 'all', ['a', 'b']]]),
         ];
 
         /** @see DatabaseQueryBuilderTest::testBasicWhereNot() */
@@ -1286,6 +1359,24 @@ class BuilderTest extends TestCase
             fn (Builder $builder) => $builder->where('id', 1)->orWhere('id', 2),
         ];
 
+        // A composite id (a plain array without MongoDB operators) is a valid _id and must be preserved.
+        yield 'composite array id without operator' => [
+            ['find' => [['_id' => ['tenant' => 1, 'seq' => 2]], []]],
+            fn (Builder $builder) => $builder->where('id', ['tenant' => 1, 'seq' => 2]),
+        ];
+
+        // Operator documents stay valid on embedded id fields, e.g. Schema::hasColumn().
+        yield 'where array shorthand with $exists on an embedded id is unchanged' => [
+            ['find' => [['embed._id' => ['$exists' => true]], []]],
+            fn (Builder $builder) => $builder->where(['embed._id' => ['$exists' => true]]),
+        ];
+
+        // The 2-argument form on an embedded id keeps building an operator document.
+        yield 'where 2-arg embedded id with operator array keeps the operator document' => [
+            ['find' => [['embed._id' => ['$ne' => null]], []]],
+            fn (Builder $builder) => $builder->where('embed._id', ['$ne' => null]),
+        ];
+
         yield 'select colums with id alias' => [
             ['find' => [[], ['projection' => ['name' => 1, 'email' => 1, '_id' => 1]]]],
             fn (Builder $builder) => $builder->select('name', 'email', 'id'),
@@ -1598,6 +1689,30 @@ class BuilderTest extends TestCase
             'First argument of MongoDB\Laravel\Query\Builder::where must be a field path as "string". Got "float"',
             fn (Builder $builder) => $builder->where(2.3, '>', 1),
         ];
+
+        yield 'where _id equals operator document' => [
+            InvalidArgumentException::class,
+            'The value used as a document id or relation key cannot contain the MongoDB operator "$ne"',
+            fn (Builder $builder) => $builder->where('_id', '=', ['$ne' => null]),
+        ];
+
+        yield 'where id (alias) with operator document' => [
+            InvalidArgumentException::class,
+            'The value used as a document id or relation key cannot contain the MongoDB operator "$ne"',
+            fn (Builder $builder) => $builder->where('id', ['$ne' => null]),
+        ];
+
+        yield 'where _id with nested operator document' => [
+            InvalidArgumentException::class,
+            'The value used as a document id or relation key cannot contain the MongoDB operator "$gt"',
+            fn (Builder $builder) => $builder->where('_id', '=', ['foo' => ['$gt' => 1]]),
+        ];
+
+        yield 'whereIn _id with operator document element' => [
+            InvalidArgumentException::class,
+            'The value used as a document id or relation key cannot contain the MongoDB operator "$ne"',
+            fn (Builder $builder) => $builder->whereIn('_id', [['$ne' => null]]),
+        ];
     }
 
     #[DataProvider('getEloquentMethodsNotSupported')]
@@ -1769,10 +1884,57 @@ class BuilderTest extends TestCase
         );
     }
 
-    private function getBuilder(bool $renameEmbeddedIdField = true): Builder
+    public static function provideConnectionOptions(): iterable
+    {
+        yield 'find inherits maxTimeMS from config' => [
+            ['find' => [[], ['maxTimeMS' => 2000]]],
+            fn (Builder $builder) => $builder,
+            ['options' => ['maxTimeMS' => 2000]],
+        ];
+
+        yield 'aggregate inherits maxTimeMS from config' => [
+            [
+                'aggregate' => [
+                    [['$group' => ['_id' => ['foo' => '$foo'], 'foo' => ['$last' => '$foo']]]],
+                    ['maxTimeMS' => 2000],
+                ],
+            ],
+            fn (Builder $builder) => $builder->groupBy('foo'),
+            ['options' => ['maxTimeMS' => 2000]],
+        ];
+
+        yield 'distinct inherits maxTimeMS from config' => [
+            ['distinct' => ['foo', [], ['maxTimeMS' => 2000]]],
+            fn (Builder $builder) => $builder->distinct('foo'),
+            ['options' => ['maxTimeMS' => 2000]],
+        ];
+
+        yield 'options maxTimeMS overrides config maxTimeMS' => [
+            ['find' => [[], ['maxTimeMS' => 5000]]],
+            fn (Builder $builder) => $builder->options(['maxTimeMS' => 5000]),
+            ['options' => ['maxTimeMS' => 2000]],
+        ];
+
+        yield 'timeout overrides config maxTimeMS' => [
+            ['find' => [[], ['maxTimeMS' => 1000]]],
+            fn (Builder $builder) => $builder->timeout(1),
+            ['options' => ['maxTimeMS' => 2000]],
+        ];
+
+        yield 'empty config does not inject maxTimeMS' => [
+            ['find' => [[], []]],
+            fn (Builder $builder) => $builder,
+            [],
+        ];
+    }
+
+    private function getBuilder(bool $renameEmbeddedIdField = true, array $config = []): Builder
     {
         $connection = $this->createStub(Connection::class);
         $connection->method('getRenameEmbeddedIdField')->willReturn($renameEmbeddedIdField);
+        $connection->method('getConfig')->willReturnCallback(
+            static fn (?string $key = null): mixed => Arr::get($config, $key),
+        );
         $processor  = $this->createStub(Processor::class);
         $connection->method('getSession')->willReturn(null);
         $connection->method('getQueryGrammar')->willReturn(new Grammar($connection));

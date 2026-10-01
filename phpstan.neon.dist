@@ -19,6 +19,29 @@ parameters:
     ignoreErrors:
         - '#Unsafe usage of new static#'
         - '#Call to an undefined method [a-zA-Z0-9\\_\<\>\(\)]+::[a-zA-Z]+\(\)#'
+        # Closure is bound to CacheManager at runtime, PHPStan does not detect it.
+        -
+            identifier: arguments.count
+            path: src/MongoDBServiceProvider.php
+            count: 1
+            reportUnmatched: false
+        # The Table attribute and resolveClassAttribute() require Laravel 13,
+        # which is not installable on PHP 8.2.
+        -
+            identifier: staticMethod.notFound
+            path: src/Eloquent/DocumentModel.php
+            reportUnmatched: false
+        -
+            message: '#Class Illuminate\\Database\\Eloquent\\Attributes\\Table not found\.#'
+            path: src/Eloquent/DocumentModel.php
+            reportUnmatched: false
+        # The "query" and "model" parameters of vectorSearch() require mongodb/mongodb 2.4+,
+        # not yet available in the version currently installed.
+        -
+            identifier: argument.unknown
+            path: src/Query/Builder.php
+            count: 2
+            reportUnmatched: false
 
 services:
     errorFormatter.sarif:
