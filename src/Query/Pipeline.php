@@ -28,7 +28,7 @@ final class Pipeline
     private BuilderPipeline $stages;
 
     /** @var list<string> */
-    private array $temporaryFields = [];
+    private array $computedFields = [];
 
     public function __construct()
     {
@@ -41,17 +41,21 @@ final class Pipeline
         $this->stages = new BuilderPipeline($this->stages, $stage);
     }
 
-    public function unsetTemporaryField(string $field): void
+    /**
+     * Declare a field computed by the stages. Filters on it run after the
+     * stages, and the field is removed from the result.
+     */
+    public function addComputedField(string $field): void
     {
-        $this->temporaryFields[] = $field;
+        $this->computedFields[] = $field;
     }
 
     public function mergeFrom(self $other): void
     {
         $this->stages = new BuilderPipeline($this->stages, $other->stages);
 
-        foreach ($other->temporaryFields as $field) {
-            $this->temporaryFields[] = $field;
+        foreach ($other->computedFields as $field) {
+            $this->computedFields[] = $field;
         }
     }
 
@@ -184,7 +188,7 @@ final class Pipeline
         $before = [];
         $after = [];
         foreach ($this->conjuncts($filter) as $condition) {
-            if ($this->referencesTemporaryField($condition)) {
+            if ($this->referencesComputedField($condition)) {
                 $after[] = $condition;
                 continue;
             }
@@ -242,10 +246,10 @@ final class Pipeline
         };
     }
 
-    private function referencesTemporaryField(mixed $filter): bool
+    private function referencesComputedField(mixed $filter): bool
     {
         if (is_string($filter)) {
-            return $this->referencesTemporaryFieldPath($filter);
+            return $this->referencesComputedFieldPath($filter);
         }
 
         if (! is_array($filter)) {
@@ -253,11 +257,11 @@ final class Pipeline
         }
 
         foreach ($filter as $key => $value) {
-            if (is_string($key) && $this->referencesTemporaryFieldKey($key)) {
+            if (is_string($key) && $this->referencesComputedFieldKey($key)) {
                 return true;
             }
 
-            if ($this->referencesTemporaryField($value)) {
+            if ($this->referencesComputedField($value)) {
                 return true;
             }
         }
@@ -265,9 +269,9 @@ final class Pipeline
         return false;
     }
 
-    private function referencesTemporaryFieldKey(string $key): bool
+    private function referencesComputedFieldKey(string $key): bool
     {
-        foreach ($this->temporaryFields as $field) {
+        foreach ($this->computedFields as $field) {
             if ($key === $field || str_starts_with($key, $field . '.')) {
                 return true;
             }
@@ -276,9 +280,9 @@ final class Pipeline
         return false;
     }
 
-    private function referencesTemporaryFieldPath(string $path): bool
+    private function referencesComputedFieldPath(string $path): bool
     {
-        foreach ($this->temporaryFields as $field) {
+        foreach ($this->computedFields as $field) {
             if ($path === '$' . $field || str_starts_with($path, '$' . $field . '.')) {
                 return true;
             }
@@ -381,7 +385,7 @@ final class Pipeline
     /** @return list<array<string, mixed>> */
     private function unsetStage(): array
     {
-        return $this->temporaryFields === [] ? [] : [['$unset' => $this->temporaryFields]];
+        return $this->computedFields === [] ? [] : [['$unset' => $this->computedFields]];
     }
 
     /**

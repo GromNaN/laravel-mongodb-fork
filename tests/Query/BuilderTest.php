@@ -1686,7 +1686,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->where('name', 'foo')
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline stage without a filter' => [
@@ -1697,7 +1697,7 @@ class BuilderTest extends TestCase
                 ],
             ],
             fn (Builder $builder) => $builder
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline sorts on a field the stages compute' => [
@@ -1713,7 +1713,7 @@ class BuilderTest extends TestCase
             fn (Builder $builder) => $builder
                 ->orderBy('__count_books', -1)
                 ->orderBy('name')
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline runs the computed filter after the stages' => [
@@ -1731,8 +1731,8 @@ class BuilderTest extends TestCase
             function (Builder $builder) {
                 $builder->where('active', true)
                     ->where('__count_books', '>=', 2)
-                    ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
-                    ->unsetTemporaryField('__count_books');
+                    ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
+                    ->addInternalFieldToUnset('__count_books');
 
                 return $builder;
             },
@@ -1756,7 +1756,7 @@ class BuilderTest extends TestCase
                 ->skip(5)
                 ->limit(10)
                 ->select('name')
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline unsets temporary fields last' => [
@@ -1771,10 +1771,10 @@ class BuilderTest extends TestCase
                 ],
             ],
             fn (Builder $builder) => $builder
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
-                ->addStage(['$addFields' => ['__count_books' => ['$size' => '$__rel_books']]])
-                ->unsetTemporaryField('__rel_books')
-                ->unsetTemporaryField('__count_books'),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
+                ->addInternalStage(['$addFields' => ['__count_books' => ['$size' => '$__rel_books']]])
+                ->addInternalFieldToUnset('__rel_books')
+                ->addInternalFieldToUnset('__count_books'),
         ];
 
         yield 'pipeline count folds into an aggregate' => [
@@ -1790,7 +1790,7 @@ class BuilderTest extends TestCase
             ],
             function (Builder $builder) {
                 $builder->where('name', 'foo')
-                    ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
+                    ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
                 $builder->aggregate = ['function' => 'count', 'columns' => ['*']];
 
                 return $builder;
@@ -1813,8 +1813,8 @@ class BuilderTest extends TestCase
                 $builder
                     ->where(function (Builder $query): void {
                         $query->where('__count_books', '>=', 2)
-                            ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
-                            ->unsetTemporaryField('__count_books');
+                            ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
+                            ->addInternalFieldToUnset('__count_books');
                     })
                     ->where('active', true);
 
@@ -1836,7 +1836,7 @@ class BuilderTest extends TestCase
                 $builder->where(function (Builder $outer): void {
                     $outer->where(function (Builder $inner): void {
                         $inner->where('active', true)
-                            ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
+                            ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
                     });
                 });
 
@@ -1865,7 +1865,7 @@ class BuilderTest extends TestCase
                 ->where('name', 'foo')
                 ->orWhere('name', 'bar')
                 ->where('active', true)
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline count applies the paging options' => [
@@ -1884,7 +1884,7 @@ class BuilderTest extends TestCase
             function (Builder $builder) {
                 $builder->where('name', 'foo')
                     ->options(['skip' => 2, 'limit' => 3])
-                    ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
+                    ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
                 $builder->aggregate = ['function' => 'count', 'columns' => ['*']];
 
                 return $builder;
@@ -1900,7 +1900,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['limit' => 0])
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline translates a slice projection' => [
@@ -1915,7 +1915,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$slice' => 1]])
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline translates a slice beside an inclusion in one $project' => [
@@ -1930,7 +1930,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$slice' => 1], 'name' => 1])
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline translates a slice beside an exclusion in $set and $project' => [
@@ -1946,7 +1946,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$slice' => 1], 'name' => 0])
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline omits an empty projection' => [
@@ -1958,7 +1958,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['projection' => []])
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]),
         ];
 
         yield 'pipeline accepts a stage builder' => [
@@ -1969,7 +1969,7 @@ class BuilderTest extends TestCase
                 ],
             ],
             fn (Builder $builder) => $builder
-                ->addStage(Stage::match(['name' => 'foo'])),
+                ->addInternalStage(Stage::match(['name' => 'foo'])),
         ];
 
         yield 'pipeline stages join an existing aggregate after its match' => [
@@ -1986,7 +1986,7 @@ class BuilderTest extends TestCase
             fn (Builder $builder) => $builder
                 ->where('name', 'foo')
                 ->groupBy('type')
-                ->addStage(['$addFields' => ['flag' => true]]),
+                ->addInternalStage(['$addFields' => ['flag' => true]]),
         ];
 
         yield 'pipeline translates an object-form sort' => [
@@ -2002,7 +2002,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['sort' => (object) ['name' => -1], 'limit' => 1])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline translates an object-form projection' => [
@@ -2017,7 +2017,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['projection' => (object) ['secret' => 0]])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline passes a computed projection through' => [
@@ -2032,7 +2032,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['upper' => ['$toUpper' => '$name']])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline translates an object-form slice specification' => [
@@ -2047,7 +2047,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => (object) ['$slice' => 1]])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline keeps a negative skip and limit' => [
@@ -2063,7 +2063,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['skip' => -1, 'limit' => -2])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline keeps invalid paging values' => [
@@ -2079,7 +2079,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->options(['skip' => 'from', 'limit' => 'invalid'])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline translates a slice beside a plain _id inclusion' => [
@@ -2094,7 +2094,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$slice' => 1], '_id' => 1])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline translates a slice beside an _id inclusion and an exclusion' => [
@@ -2110,7 +2110,7 @@ class BuilderTest extends TestCase
             ],
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$slice' => 1], '_id' => 1, 'secret' => 0])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline runs a filter on a descendant of a temporary field after the stages' => [
@@ -2125,8 +2125,8 @@ class BuilderTest extends TestCase
                 ],
             ],
             fn (Builder $builder) => $builder
-                ->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
-                ->unsetTemporaryField('__rel_books')
+                ->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']])
+                ->addInternalFieldToUnset('__rel_books')
                 ->where('__rel_books.title', 'Moby-Dick'),
         ];
 
@@ -2142,8 +2142,8 @@ class BuilderTest extends TestCase
                 ],
             ],
             fn (Builder $builder) => $builder
-                ->addStage(['$addFields' => ['__count_books' => 1]])
-                ->unsetTemporaryField('__count_books')
+                ->addInternalStage(['$addFields' => ['__count_books' => 1]])
+                ->addInternalFieldToUnset('__count_books')
                 ->whereRaw(['$expr' => ['$gte' => ['$__count_books', 2]]]),
         ];
     }
@@ -2304,7 +2304,7 @@ class BuilderTest extends TestCase
             'Pipeline stages cannot be combined with a [distinct] query.',
             fn (Builder $builder) => $builder
                 ->distinct('foo')
-                ->addStage(['$lookup' => ['from' => 'bar']]),
+                ->addInternalStage(['$lookup' => ['from' => 'bar']]),
         ];
 
         yield 'pipeline with a natural sort' => [
@@ -2312,7 +2312,7 @@ class BuilderTest extends TestCase
             'A "$natural" sort cannot be compiled into an aggregation $sort stage',
             fn (Builder $builder) => $builder
                 ->orderBy('natural', 'desc')
-                ->addStage(['$lookup' => ['from' => 'bar']]),
+                ->addInternalStage(['$lookup' => ['from' => 'bar']]),
         ];
 
         yield 'pipeline with an $elemMatch projection' => [
@@ -2320,7 +2320,7 @@ class BuilderTest extends TestCase
             'The projection of "tags" uses "$elemMatch", a find-only operator that cannot be compiled into an aggregation $project stage. Project the field with a $filter expression instead.',
             fn (Builder $builder) => $builder
                 ->project(['tags' => ['$elemMatch' => ['name' => 'foo']]])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline with a $slice projection through a path' => [
@@ -2328,7 +2328,7 @@ class BuilderTest extends TestCase
             'The projection of "sub.tags" slices a field reached through a path. A find applies that slice per array element along the path, which an aggregation stage cannot express; project the field with your own aggregation expression instead.',
             fn (Builder $builder) => $builder
                 ->project(['sub.tags' => ['$slice' => 1]])
-                ->addStage(['$match' => ['active' => true]]),
+                ->addInternalStage(['$match' => ['active' => true]]),
         ];
 
         yield 'pipeline stages in an elemMatch constraint' => [
@@ -2338,7 +2338,7 @@ class BuilderTest extends TestCase
                 'items',
                 'elemMatch',
                 function (Builder $elemMatchQuery): void {
-                    $elemMatchQuery->where('value', 'foo')->addStage(['$lookup' => ['from' => 'books', 'as' => '__r']]);
+                    $elemMatchQuery->where('value', 'foo')->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__r']]);
                 },
             ),
         ];
@@ -2346,7 +2346,7 @@ class BuilderTest extends TestCase
 
     public function testPipelineStagesCannotBeUsedToDelete(): void
     {
-        $builder = $this->getBuilder()->addStage(['$lookup' => ['from' => 'bar']]);
+        $builder = $this->getBuilder()->addInternalStage(['$lookup' => ['from' => 'bar']]);
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('A query carrying relationship aggregate stages cannot delete or update documents.');
@@ -2356,7 +2356,7 @@ class BuilderTest extends TestCase
 
     public function testPipelineStagesCannotBeUsedToUpdate(): void
     {
-        $builder = $this->getBuilder()->addStage(['$lookup' => ['from' => 'bar']]);
+        $builder = $this->getBuilder()->addInternalStage(['$lookup' => ['from' => 'bar']]);
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('A query carrying relationship aggregate stages cannot delete or update documents.');
@@ -2368,7 +2368,7 @@ class BuilderTest extends TestCase
     {
         $builder = $this->getBuilder()->where(function (Builder $outer): void {
             $outer->where(function (Builder $inner): void {
-                $inner->where('active', true)->addStage(['$lookup' => ['from' => 'bar']]);
+                $inner->where('active', true)->addInternalStage(['$lookup' => ['from' => 'bar']]);
             });
         });
 
@@ -2381,7 +2381,7 @@ class BuilderTest extends TestCase
     public function testPipelineStagesOfANestedQueryAreNotDuplicatedByRecompilation(): void
     {
         $builder = $this->getBuilder()->where(function (Builder $query): void {
-            $query->where('active', true)->addStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
+            $query->where('active', true)->addInternalStage(['$lookup' => ['from' => 'books', 'as' => '__rel_books']]);
         });
 
         $first = $builder->toMql();

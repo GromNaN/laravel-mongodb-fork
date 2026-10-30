@@ -110,9 +110,9 @@ class QueryBuilderTest extends TestCase
         ]);
 
         $users = DB::table('users')
-            ->addStage(['$addFields' => ['__name' => ['$toUpper' => '$name']]])
+            ->addInternalStage(['$addFields' => ['__name' => ['$toUpper' => '$name']]])
             ->orderBy('__name', -1)
-            ->unsetTemporaryField('__name')
+            ->addInternalFieldToUnset('__name')
             ->get();
 
         $this->assertSame(['John Doe', 'Jane Doe'], $users->pluck('name')->all());
@@ -127,7 +127,7 @@ class QueryBuilderTest extends TestCase
         ]);
 
         $count = DB::table('users')
-            ->addStage(['$match' => ['name' => 'Jane Doe']])
+            ->addInternalStage(['$match' => ['name' => 'Jane Doe']])
             ->count();
 
         $this->assertSame(1, $count);
@@ -141,7 +141,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->project(['tags' => ['$slice' => 1]])
-            ->addStage(['$addFields' => ['__flag' => true]])
+            ->addInternalStage(['$addFields' => ['__flag' => true]])
             ->get()
             ->first();
 
@@ -157,7 +157,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->project(['tags' => ['$slice' => 1], 'secret' => 0])
-            ->addStage(['$addFields' => ['__flag' => true]])
+            ->addInternalStage(['$addFields' => ['__flag' => true]])
             ->get()
             ->first();
 
@@ -177,7 +177,7 @@ class QueryBuilderTest extends TestCase
 
         $items = DB::table('items')
             ->project(['tags' => ['$slice' => 1]])
-            ->addStage(['$addFields' => ['__flag' => true]])
+            ->addInternalStage(['$addFields' => ['__flag' => true]])
             ->orderBy('name')
             ->get();
 
@@ -195,7 +195,7 @@ class QueryBuilderTest extends TestCase
         ]);
 
         $users = DB::table('users')
-            ->addStage(Stage::match(['name' => 'Jane Doe']))
+            ->addInternalStage(Stage::match(['name' => 'Jane Doe']))
             ->get();
 
         $this->assertSame(['Jane Doe'], $users->pluck('name')->all());
@@ -211,7 +211,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->options(['sort' => (object) ['name' => -1], 'limit' => 1])
-            ->addStage(['$match' => ['name' => ['$ne' => 'zzz']]])
+            ->addInternalStage(['$match' => ['name' => ['$ne' => 'zzz']]])
             ->first();
 
         $this->assertSame('c', $item->name);
@@ -225,7 +225,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->options(['projection' => (object) ['secret' => 0]])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->first();
 
         $this->assertSame('fork', $item->name);
@@ -240,7 +240,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->project(['upper' => ['$toUpper' => '$name']])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->first();
 
         $this->assertSame('FORK', $item->upper);
@@ -254,7 +254,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->project(['tags' => (object) ['$slice' => 1]])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->get()
             ->first();
 
@@ -273,7 +273,7 @@ class QueryBuilderTest extends TestCase
 
         DB::table('items')
             ->options(['limit' => -2])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->get();
     }
 
@@ -288,7 +288,7 @@ class QueryBuilderTest extends TestCase
 
         DB::table('items')
             ->options(['limit' => 'invalid'])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->get();
     }
 
@@ -300,7 +300,7 @@ class QueryBuilderTest extends TestCase
 
         $item = DB::table('items')
             ->project(['tags' => ['$slice' => 1], '_id' => 1, 'secret' => 0])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->get()
             ->first();
 
@@ -320,7 +320,7 @@ class QueryBuilderTest extends TestCase
 
         DB::table('items')
             ->project(['sub.tags' => ['$slice' => 1]])
-            ->addStage(['$match' => ['name' => 'fork']])
+            ->addInternalStage(['$match' => ['name' => 'fork']])
             ->get();
     }
 
@@ -332,8 +332,8 @@ class QueryBuilderTest extends TestCase
         ]);
 
         $items = DB::table('items')
-            ->addStage(['$addFields' => ['__rel' => ['title' => 'Moby']]])
-            ->unsetTemporaryField('__rel')
+            ->addInternalStage(['$addFields' => ['__rel' => ['title' => 'Moby']]])
+            ->addInternalFieldToUnset('__rel')
             ->where('__rel.title', 'Moby')
             ->get();
 
@@ -349,8 +349,8 @@ class QueryBuilderTest extends TestCase
         ]);
 
         $items = DB::table('items')
-            ->addStage(['$addFields' => ['__double' => ['$multiply' => ['$count', 2]]]])
-            ->unsetTemporaryField('__double')
+            ->addInternalStage(['$addFields' => ['__double' => ['$multiply' => ['$count', 2]]]])
+            ->addInternalFieldToUnset('__double')
             ->whereRaw(['$expr' => ['$gte' => ['$__double', 8]]])
             ->get();
 
